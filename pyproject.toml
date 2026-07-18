@@ -1,0 +1,42 @@
+[project]
+name = "localagent"
+version = "0.2.0"
+description = "Agente de IA local, libre y para todos (ollama + MCP). Cero nube."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Germani De Jesús Uicab Moo", email = "germani.jesus.uicab@gmail.com" }]
+keywords = ["llm", "ollama", "mcp", "agent", "local-first", "rag"]
+dynamic = ["dependencies"]
+
+[project.urls]
+Repository = "https://github.com/GermaniU/libre-agent"
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+# --- Linter + formatter (ruff). Correr con:  uvx ruff check .   /   uvx ruff format .
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/F pyflakes+pycodestyle, I import-sort, UP pyupgrade, B bugbear, SIM simplify, C4 comprehensions
+select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
+ignore = [
+  "E501",  # el largo de línea lo maneja el formatter
+  "B008",  # llamadas en defaults (FastAPI Depends/Field es idiomático)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"app.py" = ["E402"]  # imports diferidos tras configurar Streamlit
+
+[tool.ruff.format]
+quote-style = "double"

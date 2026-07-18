@@ -19,3 +19,4 @@ static/*.html
 # sistema
 .DS_Store
 mcp.json
+.pytest_cache/

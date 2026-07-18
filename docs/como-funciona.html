@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Cómo funciona LocalAgent</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--hover:#1c2128;--bdr:#30363d;--tx:#e6edf3;--mt:#8b949e;--ac:#e8794e;--acs:rgba(232,121,78,.12);--acg:rgba(232,121,78,.3);--ok:#3fb950;--warn:#d29922;--info:#58a6ff;--r:12px}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);line-height:1.7;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
+.pc{position:fixed;top:0;left:0;right:0;height:3px;z-index:200}.pb{height:100%;width:0;background:var(--ac);transition:width .1s}
+.hero{padding:70px 30px 50px;text-align:center;background:linear-gradient(180deg,rgba(232,121,78,.08),transparent);border-bottom:1px solid var(--bdr);position:relative;overflow:hidden}
+.hero .logo{width:76px;height:76px;margin:0 auto 20px;display:block}
+.hero h1{font-size:clamp(1.8rem,5vw,3rem);font-weight:800;letter-spacing:-.03em;margin-bottom:10px}
+.hero h1 span{color:var(--ac)}
+.hero .sub{font-size:clamp(.95rem,2vw,1.15rem);color:var(--mt);max-width:640px;margin:0 auto 25px}
+.hero .tags{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;font-size:.8rem;color:var(--mt)}
+.hero .tags span{background:var(--card);padding:5px 12px;border-radius:16px;border:1px solid var(--bdr)}
+.nb{position:sticky;top:0;z-index:100;background:rgba(13,17,23,.85);border-bottom:1px solid var(--bdr);backdrop-filter:blur(12px)}
+.ni{max-width:1100px;margin:0 auto;display:flex;align-items:center;padding:0 14px;overflow-x:auto;gap:0}
+.nt{padding:13px 14px;font-size:.78rem;font-weight:600;color:var(--mt);text-decoration:none;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s;cursor:pointer}
+.nt:hover{color:var(--tx)}.nt.active{color:var(--ac);border-bottom-color:var(--ac)}
+.mc{max-width:860px;margin:0 auto;padding:40px 24px 80px}
+.ph{margin:0 0 30px;padding:32px;background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);text-align:center}
+.ph .pn{font-size:.75rem;text-transform:uppercase;letter-spacing:.15em;color:var(--ac);margin-bottom:6px}
+.ph h2{font-size:1.5rem;font-weight:700;margin-bottom:8px}
+.ph p{color:var(--mt);max-width:520px;margin:0 auto;font-size:.92rem}
+.s{margin-bottom:16px;border:1px solid var(--bdr);border-radius:var(--r);background:var(--card);overflow:hidden;transition:border-color .2s;scroll-margin-top:60px}
+.s:hover{border-color:rgba(232,121,78,.35)}
+.sh{display:flex;align-items:center;gap:12px;padding:16px 20px;cursor:pointer;user-select:none;transition:background .2s}
+.sh:hover{background:var(--hover)}
+.sn{font-size:.68rem;font-weight:700;color:var(--ac);background:var(--acs);width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;flex-shrink:0}
+.si{font-size:1.2rem;flex-shrink:0}
+.sg{flex:1;min-width:0}
+.st{font-size:.98rem;font-weight:600;line-height:1.3}
+.ss{font-size:.8rem;color:var(--mt)}
+.sta{color:var(--mt);font-size:.9rem;transition:transform .3s;flex-shrink:0}
+.s.open .sta{transform:rotate(180deg)}
+.sb{max-height:0;overflow:hidden;transition:max-height .5s ease}
+.s.open .sb{max-height:none}
+.bi{padding:0 20px 26px;border-top:1px solid var(--bdr);padding-top:22px}
+.bi p{margin-bottom:12px;font-size:.9rem;color:var(--mt)}
+.bi h4{font-size:.93rem;font-weight:600;margin:24px 0 10px;color:var(--tx)}
+.bi h4:first-child{margin-top:0}
+.bi ul,.bi ol{margin:6px 0 12px 20px}.bi li{margin-bottom:6px;font-size:.88rem;color:var(--mt);line-height:1.6}
+.bi strong{color:var(--tx)}
+.bi code{font-family:'JetBrains Mono','Fira Code',Consolas,monospace;font-size:.82em;background:var(--bg);border:1px solid var(--bdr);border-radius:5px;padding:1px 6px;color:#c9d1d9}
+.t{width:100%;border-collapse:collapse;margin:14px 0;font-size:.83rem}
+.t th{text-align:left;padding:9px 12px;background:var(--bg);border-bottom:2px solid var(--bdr);font-weight:600;font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;color:var(--mt)}
+.t td{padding:9px 12px;border-bottom:1px solid var(--bdr);color:var(--mt);vertical-align:top}
+.t tr:hover td{background:var(--hover)}
+.t td code{white-space:nowrap}
+.cb{margin:14px 0;border:1px solid var(--bdr);border-radius:8px;overflow:hidden;background:#010409}
+.ch{padding:9px 14px;font-size:.73rem;font-weight:600;color:var(--mt);background:var(--card);border-bottom:1px solid var(--bdr)}
+.cb pre{padding:14px;overflow-x:auto;font-family:'JetBrains Mono','Fira Code',Consolas,monospace;font-size:.78rem;line-height:1.65;color:#c9d1d9}
+.box{margin:16px 0;padding:14px 18px;border-radius:0 8px 8px 0;border-left:3px solid}
+.box p{margin:0!important;font-size:.88rem!important}
+.bt{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+.have{background:rgba(63,185,80,.06);border-color:var(--ok)}.have .bt{color:var(--ok)}
+.gap{background:rgba(88,166,255,.06);border-color:var(--info)}.gap .bt{color:var(--info)}
+.warn{background:rgba(210,153,34,.06);border-color:var(--warn)}.warn .bt{color:var(--warn)}
+.info{background:rgba(88,166,255,.06);border-color:var(--info)}.info .bt{color:var(--info)}
+.flow{counter-reset:step;margin:16px 0}
+.flow .fs{display:flex;gap:14px;padding:10px 0;align-items:flex-start}
+.flow .fs::before{counter-increment:step;content:counter(step);flex-shrink:0;width:26px;height:26px;background:var(--acs);color:var(--ac);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;border:1px solid var(--acg)}
+.flow .fs div{font-size:.88rem;color:var(--mt);padding-top:2px}
+.flow .fs strong{color:var(--tx)}
+.bt2{position:fixed;bottom:28px;right:28px;width:42px;height:42px;background:var(--ac);color:#fff;border:none;border-radius:50%;font-size:1.1rem;cursor:pointer;opacity:0;transform:translateY(10px);transition:all .3s;z-index:150;display:flex;align-items:center;justify-content:center}
+.bt2.vis{opacity:1;transform:translateY(0)}.bt2:hover{transform:translateY(-3px);box-shadow:0 4px 20px var(--acg)}
+.foot{text-align:center;color:var(--mt);font-size:.8rem;padding:30px 20px;border-top:1px solid var(--bdr)}
+@media(max-width:768px){.hero{padding:45px 18px 35px}.mc{padding:20px 14px 70px}.sh{padding:12px 14px}.bi{padding:14px 16px 22px;padding-top:18px}.t{font-size:.78rem}.t th,.t td{padding:7px 8px}.nt{padding:11px 10px;font-size:.73rem}}
+</style>
+</head>
+<body>
+<div class="pc"><div class="pb" id="pb"></div></div>
+
+<header class="hero">
+  <svg class="logo" viewBox="0 0 64 64" aria-label="LocalAgent">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EA8A66"/><stop offset="1" stop-color="#C75F3D"/></linearGradient></defs>
+    <rect width="64" height="64" rx="16" fill="url(#g)"/>
+    <path d="M32 13l4.1 11.1L47 28l-10.9 3.9L32 43l-4.1-11.1L17 28l10.9-3.9z" fill="#fff"/>
+    <circle cx="46.5" cy="46.5" r="4.4" fill="#fff" opacity=".92"/>
+  </svg>
+  <h1>Cómo funciona <span>LocalAgent</span></h1>
+  <p class="sub">Un agente de IA que corre 100% en tu máquina — arquitectura, ciclo de un turno, MCP, memoria y las decisiones de diseño detrás del código.</p>
+  <div class="tags"><span>~3.600 líneas</span><span>Python 3.12 + JS vanilla</span><span>ollama + MCP</span><span>Cero nube</span></div>
+</header>
+
+<nav class="nb"><div class="ni">
+  <a class="nt" href="#s1">Visión general</a>
+  <a class="nt" href="#s2">Arquitectura</a>
+  <a class="nt" href="#s3">Ciclo de un turno</a>
+  <a class="nt" href="#s4">Módulos</a>
+  <a class="nt" href="#s5">Tools</a>
+  <a class="nt" href="#s6">MCP</a>
+  <a class="nt" href="#s7">Memoria</a>
+  <a class="nt" href="#s8">Frontend</a>
+  <a class="nt" href="#s9">Seguridad</a>
+  <a class="nt" href="#s10">Buenas prácticas</a>
+  <a class="nt" href="#s11">Correrlo</a>
+</div></nav>
+
+<div class="mc">
+<div class="ph"><div class="pn">Documentación técnica</div><h2>El agente, por dentro</h2><p>LocalAgent es chico y legible a propósito. Este documento recorre cómo está armado y por qué, módulo por módulo.</p></div>
+
+<!-- 1 -->
+<section class="s open" id="s1">
+  <div class="sh" onclick="tog('s1')"><div class="sn">01</div><div class="si">🧭</div><div class="sg"><div class="st">Visión general</div><div class="ss">Qué es y qué principios lo guían</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <p><strong>LocalAgent</strong> es un asistente/agente que corre íntegramente en tu máquina: el modelo (vía <strong>ollama</strong>), las conversaciones (SQLite) y la memoria (un servidor MCP). No hay nube ni API keys de pago. Se opera desde una <strong>UI web (SPA)</strong> o un <strong>bot de Telegram</strong>, ambos sobre el mismo núcleo.</p>
+    <h4>Tres principios de diseño</h4>
+    <ul>
+      <li><strong>Legible sobre completo.</strong> ~3.600 líneas que se entienden en una tarde; sin build step, sin cadena de JS, sin framework de frontend.</li>
+      <li><strong>Un núcleo, muchos gateways.</strong> La lógica de un turno vive en un solo lugar (<code>agent.py</code>), así la UI y el bot nunca divergen.</li>
+      <li><strong>Estándar sobre custom.</strong> Las capacidades externas (memoria, tools de terceros) entran por <strong>MCP</strong>, el mismo protocolo que usan Claude Code o Cursor: lo que conectás acá sirve en todos.</li>
+    </ul>
+    <div class="box info"><div class="bt">TL;DR</div><p>ollama pone el cerebro, <code>agent.py</code> orquesta el turno, las <code>tools</code> y el <code>mcp_bridge</code> ponen las manos, y SQLite + mcp-memory ponen la memoria.</p></div>
+  </div></div>
+</section>
+
+<!-- 2 -->
+<section class="s" id="s2">
+  <div class="sh" onclick="tog('s2')"><div class="sn">02</div><div class="si">🏗️</div><div class="sg"><div class="st">Arquitectura</div><div class="ss">Gateways, núcleo y dependencias</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <p>Dos <strong>gateways</strong> (UI web y bot) hablan con un <strong>núcleo</strong> compartido. El núcleo delega en ollama para el razonamiento, en las tools locales y el puente MCP para las acciones, y en la capa de memoria para el contexto persistente.</p>
+    <div class="cb"><div class="ch">Vista de conjunto</div><pre>┌──────────────┐   ┌───────────────┐
+│  UI web SPA  │   │  bot Telegram │   gateways (mismo núcleo)
+│   :8585      │   │               │
+└──────┬───────┘   └──────┬────────┘
+       └─────────┬────────┘
+                 ▼
+         ┌────────────────┐   agent.py = build_system + finalize
+         │  núcleo agente │   (un turno se resuelve igual en todos)
+         └───────┬────────┘
+    ┌────────────┼───────────────┬───────────────┐
+    ▼            ▼               ▼               ▼
+┌────────┐  ┌─────────┐   ┌────────────┐  ┌──────────┐
+│ ollama │  │  tools  │   │ mcp_bridge │  │  vault   │
+│ (chat) │  │ locales │   │ (mcp.json) │  │  (RAG)   │
+└────────┘  └─────────┘   └─────┬──────┘  └──────────┘
+                                ▼
+                       ┌──────────────────┐
+                       │   mcp-memory     │  memoria semántica
+                       │  (otra máquina)  │  Ollama emb + Qdrant
+                       └──────────────────┘</pre></div>
+    <div class="box have"><div class="bt">Por qué así</div><p>Separar <em>gateway</em> de <em>núcleo</em> es lo que evita el bug clásico de "la UI hace una cosa y el bot otra". Un turno de chat es una función pura de orquestación; los gateways solo adaptan entrada/salida (HTTP streaming vs. mensajes de Telegram).</p></div>
+  </div></div>
+</section>
+
+<!-- 3 -->
+<section class="s" id="s3">
+  <div class="sh" onclick="tog('s3')"><div class="sn">03</div><div class="si">🔄</div><div class="sg"><div class="st">El ciclo de un turno</div><div class="ss">De tu mensaje a la respuesta, paso a paso</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <p>Cuando enviás un mensaje en la SPA, el backend abre un <strong>stream NDJSON</strong> (<code>POST /api/chat</code>) y emite eventos en vivo. Este es el recorrido real (<code>api.py</code> + <code>clients.chat_stream_with_tools</code>):</p>
+    <div class="flow">
+      <div class="fs"><div><strong>Cargar sesión.</strong> <code>store.load_sessions()</code> trae el historial; se agrega tu mensaje.</div></div>
+      <div class="fs"><div><strong>Armar el system prompt.</strong> <code>agent.build_system(soul, mensaje, use_memory)</code> combina <code>soul.md</code> con un <em>auto-recall</em> de memoria relevante. Emite evento <code>recall</code>.</div></div>
+      <div class="fs"><div><strong>Conectar MCPs.</strong> Si hay servidores activos, <code>mcp_bridge.MCPBridge</code> los levanta y suma sus <code>specs</code> a las tools locales.</div></div>
+      <div class="fs"><div><strong>Loop de rondas.</strong> Se llama a ollama con <code>stream=True</code>. Los tokens del texto salen en vivo (evento <code>token</code>). Si el modelo pide una tool, se emite <code>tool</code>, se ejecuta (<code>tools.execute</code> o <code>bridge.call</code>), se agrega el resultado y se repite — hasta que no haya más tool calls o se llegue a <code>max_rounds</code>.</div></div>
+      <div class="fs"><div><strong>Cerrar.</strong> <code>agent.finalize()</code> hace <em>auto-save</em> de hechos nuevos a la memoria y escribe la traza (<code>trace.py</code>). Evento <code>done</code> con <code>reply</code>, <code>calls</code>, <code>usage</code> y <code>meta</code> (tokens, seg, tok/s).</div></div>
+      <div class="fs"><div><strong>Persistir.</strong> <code>store.save_session()</code> guarda la conversación actualizada en SQLite.</div></div>
+    </div>
+    <div class="box info"><div class="bt">Degradación elegante</div><p>Si el modelo elegido no soporta tools o <em>thinking</em>, <code>clients.py</code> lo detecta en el error de ollama, reintenta sin esa capacidad y sigue. El turno nunca se cae por elegir un modelo "chico".</p></div>
+  </div></div>
+</section>
+
+<!-- 4 -->
+<section class="s" id="s4">
+  <div class="sh" onclick="tog('s4')"><div class="sn">04</div><div class="si">🧩</div><div class="sg"><div class="st">Módulos</div><div class="ss">Qué hace cada archivo</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <table class="t"><thead><tr><th>Módulo</th><th>Líneas</th><th>Responsabilidad</th></tr></thead><tbody>
+      <tr><td><code>agent.py</code></td><td>43</td><td>Núcleo compartido: <code>build_system</code> (prompt + recall) y <code>finalize</code> (save + trace).</td></tr>
+      <tr><td><code>clients.py</code></td><td>291</td><td>Cliente ollama: chat, streaming con tools, ventana de contexto + corpus/RAG del vault.</td></tr>
+      <tr><td><code>tools.py</code></td><td>376</td><td>Tools locales: web, vault, filesystem, shell (con guardas), HTML, skills.</td></tr>
+      <tr><td><code>api.py</code></td><td>417</td><td>Backend FastAPI: sirve la SPA y expone el agente por HTTP (streaming NDJSON).</td></tr>
+      <tr><td><code>app.py</code></td><td>345</td><td>UI clásica en Streamlit (alternativa a la SPA).</td></tr>
+      <tr><td><code>telegram_bot.py</code></td><td>289</td><td>Bot de Telegram sobre el mismo núcleo y tools.</td></tr>
+      <tr><td><code>mcp_bridge.py</code></td><td>104</td><td>Conecta los servers de <code>mcp.json</code> (stdio/http) y expone sus tools namespaceadas.</td></tr>
+      <tr><td><code>memory.py</code></td><td>107</td><td>Memoria persistente sobre mcp-memory: auto-recall + auto-save.</td></tr>
+      <tr><td><code>store.py</code></td><td>69</td><td>Persistencia de conversaciones en SQLite.</td></tr>
+      <tr><td><code>skills.py</code></td><td>69</td><td>Procedimientos reutilizables (<code>skills/*.md</code>), invocables con <code>use_skill</code>.</td></tr>
+      <tr><td><code>trace.py</code></td><td>33</td><td>Trazabilidad JSONL de cada turno.</td></tr>
+      <tr><td><code>config.py</code></td><td>24</td><td>Endpoints y parámetros; todo override por variable de entorno.</td></tr>
+      <tr><td><code>web/app.js</code></td><td>1426</td><td>Frontend SPA en JS vanilla: estado, render, streaming, config.</td></tr>
+    </tbody></table>
+  </div></div>
+</section>
+
+<!-- 5 -->
+<section class="s" id="s5">
+  <div class="sh" onclick="tog('s5')"><div class="sn">05</div><div class="si">🛠️</div><div class="sg"><div class="st">Tools y el loop de function-calling</div><div class="ss">Cómo el modelo "hace cosas"</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <p>Cada tool se declara con un <em>spec</em> (nombre, descripción, JSON Schema de parámetros) en formato ollama/OpenAI. El modelo decide cuándo llamarlas; <code>clients.py</code> ejecuta la llamada, le devuelve el resultado y deja que el modelo continúe.</p>
+    <table class="t"><thead><tr><th>Tool</th><th>Qué hace</th></tr></thead><tbody>
+      <tr><td><code>web_search</code> / <code>web_fetch</code></td><td>Buscar en la web (DuckDuckGo) y leer páginas.</td></tr>
+      <tr><td><code>vault_search</code></td><td>RAG semántico sobre tus notas de Obsidian (vía corpus/Qdrant).</td></tr>
+      <tr><td><code>write_html</code></td><td>Genera una página HTML autocontenida en <code>static/</code>.</td></tr>
+      <tr><td><code>run_cmd</code> / filesystem</td><td>Crear proyectos y correr comandos de dev, confinado a <code>WORKSPACE_DIR</code>.</td></tr>
+      <tr><td><code>use_skill</code></td><td>Ejecuta un procedimiento definido en <code>skills/*.md</code>.</td></tr>
+      <tr><td><code>&lt;server&gt;__&lt;tool&gt;</code></td><td>Cualquier tool de un servidor MCP activo (ver sección MCP).</td></tr>
+    </tbody></table>
+    <p>Las tools se activan por chat desde el compositor (píldoras <strong>Web</strong>, <strong>Vault</strong>, <strong>HTML</strong>, <strong>Memoria</strong>). Si están todas apagadas, el modelo responde sin herramientas.</p>
+  </div></div>
+</section>
+
+<!-- 6 -->
+<section class="s" id="s6">
+  <div class="sh" onclick="tog('s6')"><div class="sn">06</div><div class="si">🔌</div><div class="sg"><div class="st">MCP — Model Context Protocol</div><div class="ss">Conectar servidores estándar</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <p>LocalAgent usa un <code>mcp.json</code> <strong>propio del proyecto</strong> (no hereda el de Claude). Sin archivo = ningún MCP. El <code>mcp_bridge</code> los conecta al iniciar cada chat, soporta transporte <strong>stdio</strong> y <strong>http</strong>, y namespacea cada tool como <code>&lt;server&gt;__&lt;tool&gt;</code> para que no choquen.</p>
+    <div class="cb"><div class="ch">mcp.json — mismo formato que Claude</div><pre>{
+  "mcpServers": {
+    "agentic-memory-mcp": {
+      "type": "http",
+      "url": "http://192.168.68.138:8765/mcp"
+    },
+    "local": {
+      "command": "python",
+      "args": ["-m", "mi_server"],
+      "env": { "API_KEY": "…" }
+    }
+  }
+}</pre></div>
+    <p>Todo el ciclo de vida se maneja desde la UI (<strong>Config → MCPs</strong>): alta, baja, activar/desactivar por chat, y <strong>ver/editar la config</strong> de cada server. Las variables de entorno con secretos se preservan y nunca se muestran al frontend.</p>
+    <div class="box have"><div class="bt">Combinar con mcp-memory</div><p>El default es <a href="https://github.com/GermaniU/mcp-memory" style="color:var(--ac)">mcp-memory</a>: LocalAgent es uno de sus clientes. El servidor expone <code>memory_save</code>, <code>memory_search</code>, etc.; el modelo decide cuándo guardar y recuperar. Una conexión estándar, muchos clientes.</p></div>
+  </div></div>
+</section>
+
+<!-- 7 -->
+<section class="s" id="s7">
+  <div class="sh" onclick="tog('s7')"><div class="sn">07</div><div class="si">🧠</div><div class="sg"><div class="st">Memoria</div><div class="ss">Corto y largo plazo</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <h4>Corto plazo — la conversación</h4>
+    <p><code>store.py</code> guarda cada sesión como un blob JSON en SQLite (mensajes, tool calls, tokens). Sobrevive reinicios; es lo que ves en el sidebar como "espacios".</p>
+    <h4>Largo plazo — memoria semántica</h4>
+    <p><code>memory.py</code> se apoya en <strong>mcp-memory</strong> (Ollama embeddings + Qdrant). Tiene dos caminos:</p>
+    <ul>
+      <li><strong>Automático</strong> (píldora "Memoria"): <code>build_system</code> hace <em>recall</em> de hechos relevantes en cada turno, y <code>finalize</code> hace <em>save</em> de lo nuevo. No depende de que el modelo lo pida.</li>
+      <li><strong>Explícito</strong> (tools MCP): el modelo llama <code>agentic-memory-mcp__memory_search</code> / <code>__memory_save</code> cuando lo decide.</li>
+    </ul>
+    <div class="box warn"><div class="bt">Ojo con el modelo</div><p>El camino explícito depende de que el modelo <em>elija</em> llamar la tool. Modelos chicos a veces no la disparan con prompts vagos; para recall confiable, dejá prendida la píldora "Memoria" (auto-recall) o sé explícito ("buscá en tu memoria X").</p></div>
+  </div></div>
+</section>
+
+<!-- 8 -->
+<section class="s" id="s8">
+  <div class="sh" onclick="tog('s8')"><div class="sn">08</div><div class="si">🖥️</div><div class="sg"><div class="st">Frontend SPA</div><div class="ss">Vanilla JS, sin build</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <p>La UI web es un único <code>web/app.js</code> (JS vanilla, sin framework ni bundler). Un objeto <code>state</code> global + una función <code>render()</code> que reconstruye el HTML por template strings. Los eventos se enganchan una sola vez con delegación (<code>data-action</code>).</p>
+    <ul>
+      <li><strong>Streaming.</strong> <code>sendMessage()</code> lee el body como stream y parsea NDJSON línea por línea; <code>handleEvent()</code> pinta tokens con throttling por <code>requestAnimationFrame</code>.</li>
+      <li><strong>Markdown ligero.</strong> <code>mdToHtml</code> renderiza títulos, listas, tablas y bloques de código; todo texto se escapa (<code>esc</code>) y los links se filtran por esquema (anti-XSS).</li>
+      <li><strong>Persistencia de UI.</strong> Tema, modelo y toggles en <code>localStorage</code>; las sesiones van al backend.</li>
+    </ul>
+    <div class="box info"><div class="bt">Trade-off consciente</div><p>Render por template strings = cero dependencias y todo el flujo visible en un archivo. El costo es un <code>app.js</code> grande; la mitigación es el escapado estricto y el enganche único de listeners.</p></div>
+  </div></div>
+</section>
+
+<!-- 9 -->
+<section class="s" id="s9">
+  <div class="sh" onclick="tog('s9')"><div class="sn">09</div><div class="si">🔒</div><div class="sg"><div class="st">Seguridad</div><div class="ss">Guardas y superficie de riesgo</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <table class="t"><thead><tr><th>Área</th><th>Guarda</th></tr></thead><tbody>
+      <tr><td>Shell (<code>run_cmd</code>)</td><td>Bloquea patrones destructivos y corre confinado a <code>WORKSPACE_DIR</code>.</td></tr>
+      <tr><td>Estáticos</td><td><code>realpath</code> + contención de directorio (anti path-traversal).</td></tr>
+      <tr><td>CORS</td><td>Restringido a orígenes de localhost.</td></tr>
+      <tr><td>XSS</td><td>Escapado estricto en el render; links solo con esquema http/mailto/relativo.</td></tr>
+      <tr><td>Secretos</td><td>Token de Telegram y <code>env</code> de MCP en <code>.env</code> / <code>mcp.json</code>, ambos git-ignored.</td></tr>
+    </tbody></table>
+    <div class="box warn"><div class="bt">No es un sandbox</div><p><code>run_cmd</code> ejecuta comandos de dev que el modelo decide. Las guardas reducen el daño accidental, pero mantené criterio sobre lo que corre, sobre todo con entradas de terceros (prompt injection vía contenido web/vault).</p></div>
+  </div></div>
+</section>
+
+<!-- 10 -->
+<section class="s" id="s10">
+  <div class="sh" onclick="tog('s10')"><div class="sn">10</div><div class="si">✅</div><div class="sg"><div class="st">Buenas prácticas y deuda técnica</div><div class="ss">Lectura honesta de nivel senior</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <p>Veredicto de una revisión senior del código: <strong>buen nivel para un proyecto personal</strong> — docstrings que explican el <em>por qué</em>, XSS bien pensado en el front, secretos enmascarados y deps pinneadas. Lo que lo separa de "profesional/mantenible" es la falta de red de seguridad (tests, logging) y de disciplina de tooling.</p>
+    <div class="box have"><div class="bt">Lo que está bien</div><p>Intento real de <strong>núcleo compartido</strong> (<code>agent.py</code>), <strong>docstrings</strong> abundantes y con criterio, manejo de <strong>XSS</strong> correcto en el frontend (<code>esc()</code> + href por esquema), <strong>secretos enmascarados</strong> (<code>env_keys</code> nunca expone valores) y <strong>dependencias pinneadas</strong> con política de actualización.</p></div>
+    <h4>Las 3 mejoras de mayor impacto</h4>
+    <div class="box gap"><div class="bt">1 · Red de seguridad <span style="color:var(--ok)">(tests ya agregados ✓)</span></div><p><strong>Tests</strong> sobre las superficies peligrosas: guardas de path (<code>_in_workspace</code>, <code>_safe_file</code>, incluido el caso de prefijo hermano), denylist de <code>run_cmd</code>, round-trip de <code>store.py</code>, parseo de skills y de MCP config — <strong>17 tests con pytest</strong>. Falta todavía introducir <code>logging</code> configurado (hoy los <code>except Exception: pass</code> tragan errores sin dejar rastro).</p></div>
+    <div class="box gap"><div class="bt">2 · Eliminar duplicación estructural</div><p>Desacoplar <code>memory.py</code> de Streamlit (importa <code>st.cache_resource</code> en la capa core) y <strong>subir la orquestación del turno a <code>agent.py</code></strong>: hoy el loop está casi duplicado línea por línea entre <code>app.py</code>, <code>api.py</code> y <code>telegram_bot.py</code> — incluido <code>_soul()</code> definido 3 veces con fallbacks divergentes, lo que erosiona el propósito del núcleo compartido.</p></div>
+    <div class="box gap"><div class="bt">3 · Tooling y superficie de ataque</div><p><code>pyproject.toml</code> + <strong>ruff</strong> + pre-commit <span style="color:var(--ok)">(pyproject.toml ya agregado ✓)</span>, y endurecer <code>run_cmd</code> (opt-in de shell; la denylist regex es evadible con <code>shell=True</code>) y <code>web_fetch</code> (bloqueo de IPs privadas/loopback anti-SSRF).</p></div>
+    <div class="box warn"><div class="bt">Riesgos de seguridad concretos</div><p><strong><code>run_cmd</code></strong>: <code>subprocess.run(shell=True)</code> sobre comandos del modelo, "confinado" solo por <code>cwd</code> + denylist evadible → el confinamiento a <code>WORKSPACE_DIR</code> es ilusorio. <strong><code>web_fetch</code></strong>: SSRF hacia servicios internos. <strong><code>vault_read</code></strong>: chequeo de prefijo sin <code>os.sep</code> (deja pasar directorios hermanos). <strong><code>CORPUS_KEY</code></strong>: default hardcodeado.</p></div>
+  </div></div>
+</section>
+
+<!-- 11 -->
+<section class="s" id="s11">
+  <div class="sh" onclick="tog('s11')"><div class="sn">11</div><div class="si">🚀</div><div class="sg"><div class="st">Correrlo</div><div class="ss">De cero a chateando</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <div class="cb"><div class="ch">bash</div><pre>cp .env.example .env    # solo OLLAMA_URL es imprescindible
+./run-spa.sh            # UI web (SPA) → http://localhost:8585
+
+# opcionales
+./run.sh                # UI clásica Streamlit → :8501
+./run-bot.sh            # bot de Telegram (requiere TELEGRAM_BOT_TOKEN)
+PORT=9000 ./run-spa.sh  # otro puerto</pre></div>
+    <p>Con solo tener <strong>ollama</strong> y un modelo de chat ya funciona. Memoria (MCP), vault/RAG y Telegram son opcionales y degradan solos si no los configurás.</p>
+  </div></div>
+</section>
+
+</div>
+
+<button class="bt2" id="top" onclick="scrollTo({top:0,behavior:'smooth'})" aria-label="Volver arriba">↑</button>
+<div class="foot">LocalAgent · agente de IA local, libre y para todos (MIT) · documentación técnica</div>
+
+<script>
+function tog(id){document.getElementById(id).classList.toggle('open')}
+const pb=document.getElementById('pb'),top=document.getElementById('top');
+const secs=[...document.querySelectorAll('section.s')],nav=[...document.querySelectorAll('.nt')];
+addEventListener('scroll',()=>{
+  const h=document.documentElement,sc=h.scrollTop,mx=h.scrollHeight-h.clientHeight;
+  pb.style.width=(mx>0?sc/mx*100:0)+'%';
+  top.classList.toggle('vis',sc>400);
+  let cur=secs[0]?.id;
+  for(const s of secs){if(s.getBoundingClientRect().top<120)cur=s.id}
+  nav.forEach(n=>n.classList.toggle('active',n.getAttribute('href')==='#'+cur));
+},{passive:true});
+// abrir la sección al navegar desde el menú
+nav.forEach(n=>n.addEventListener('click',()=>{const el=document.querySelector(n.getAttribute('href'));if(el&&!el.classList.contains('open'))el.classList.add('open')}));
+</script>
+</body>
+</html>
