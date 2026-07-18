@@ -37,12 +37,14 @@ tools (web, vault/RAG, filesystem, HTML) y presencia en web + Telegram.
 
 ## 📖 Cómo funciona
 
-Documentación técnica interactiva (arquitectura, ciclo de un turno, MCP, memoria,
-seguridad y buenas prácticas): **[`docs/como-funciona.html`](docs/como-funciona.html)**.
+Documentación técnica: arquitectura, ciclo de un turno, MCP, memoria, seguridad y buenas
+prácticas.
 
-> Es una página HTML autocontenida — **descargala y abrila en tu navegador**. GitHub
-> muestra el código fuente, no la renderiza. (Cuando el repo sea público, se puede ver
-> con [htmlpreview](https://htmlpreview.github.io/?https://github.com/GermaniU/libre-agent/blob/main/docs/como-funciona.html).)
+- 📄 **[Leer en GitHub (markdown)](docs/como-funciona.md)** — se lee directo, sin descargar nada.
+- 🖥️ **[Versión interactiva (HTML)](docs/como-funciona.html)** — misma info con acordeón y
+  nav; descargala y abrila en el navegador (GitHub no renderiza HTML, muestra el fuente).
+
+> Ambas versiones tienen el **mismo contenido**; elegí la que te resulte más cómoda.
 
 ## 💡 Por qué existe
 
