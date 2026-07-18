@@ -269,5 +269,219 @@ Telegram son opcionales y degradan solos si no los configurás.
 
 ---
 
+# Fundamentos
+
+Las secciones anteriores explican *qué hace* cada parte. Estas explican los **conceptos por
+dentro** — el cómo y el porqué de un asistente local. Algunos valores numéricos (VRAM,
+tokens) son ejemplos ilustrativos; ajustá a tu modelo y hardware.
+
+## F1. Ollama, GGUF y cuantización
+
+Para correr un LLM localmente hacen falta dos cosas: un **modelo** y un **runtime** que lo
+ejecute. **Ollama** es ese runtime: un servidor local (puerto `11434`) que expone una API
+REST. LocalAgent le habla por `POST /api/chat` con `stream=True` (`clients.py`).
+
+Los modelos no se distribuyen en su formato original (pesarían cientos de GB): se comprimen
+con **cuantización** en formato **GGUF**. La cuantización baja la precisión de los pesos
+para reducir tamaño y VRAM, a costa de algo de calidad. La nomenclatura `Q2…Q8` indica los
+bits por peso: más alto = más calidad y más peso.
+
+| Cuantización | Tamaño (modelo 26B) | Calidad | VRAM aprox. |
+|---|---|---|---|
+| Q8_0 | ~28 GB | Casi idéntica | ~30 GB |
+| Q5_K_M | ~19 GB | Excelente | ~20 GB |
+| Q4_K_M | ~16 GB | Muy buena | ~17 GB |
+| Q3_K_M | ~12 GB | Aceptable | ~13 GB |
+| Q2_K | ~10 GB | Pérdida notable | ~11 GB |
+
+Si la GPU no tiene VRAM suficiente, el modelo corre en **CPU** (funciona, pero más lento:
+~10-15 tok/s vs 30-50 en GPU). Regla práctica: una **RTX 3060 (12 GB)** corre modelos hasta
+~7B en GPU holgado. **LocalAgent hace esto automático**: con `VRAM_GB` en `config.py`
+calcula qué modelos entran y marca con ⚠️ CPU los que no (`clients.list_local_models`).
+
+| Modelo | Params | Fortaleza |
+|---|---|---|
+| Gemma 4 | 26B | Razonamiento + tools |
+| Llama 3.1 | 8B | Versátil, rápido |
+| Qwen 2.5 | 7B | Código + multilingüe |
+| Phi-3 | 3.8B | Muy eficiente (CPU) |
+| LLaVA / Qwen-VL | varía | Visión + lenguaje |
+
+## F2. Embeddings y RAG
+
+Un **embedding** convierte un texto en un **vector** (lista de números) que representa su
+*significado*. Textos con significado parecido quedan cerca en el espacio vectorial, así se
+puede buscar **por significado** y no por palabras exactas ("perro" y "can" caen cerca).
+
+```
+"Cómo configurar Ollama en Linux"
+  → [modelo de embeddings] → [0.023, -0.451, 0.877, …] (p.ej. 768 dims)
+  → buscar los vectores más cercanos en el índice
+  → los N fragmentos más similares semánticamente
+```
+
+**Chunking:** no se busca sobre un documento entero; se lo parte en **chunks** de ~300-500
+tokens con **overlap** (superposición) para no perder contexto en los bordes. Cada chunk se
+convierte en embedding y se indexa.
+
+| Modelo de embeddings | Dims | Nota |
+|---|---|---|
+| all-MiniLM-L6-v2 | 384 | Rápido, buen balance |
+| nomic-embed-text | 768 | Optimizado para RAG |
+| bge-m3 | 1024 | Multilingüe (español) |
+
+**El pipeline RAG (dos fases):**
+
+```
+INDEXACIÓN (una vez, o al cambiar archivos):
+  Vault (.md) → chunker → embeddings → índice vectorial
+
+BÚSQUEDA (en cada pregunta):
+  Pregunta → embedding → búsqueda top-K → inyectar los chunks en el prompt
+```
+
+> **En LocalAgent**: el RAG del vault (`vault_search`) usa un **corpus sobre Qdrant** (índice
+> vectorial) en vez de FAISS; y la memoria de largo plazo (mcp-memory) también es Qdrant +
+> embeddings de Ollama. El concepto es el mismo; cambia la pieza de almacenamiento.
+
+## F3. Tool calling
+
+El LLM **no ejecuta nada** por sí mismo: genera un **JSON estructurado** pidiendo llamar una
+función; tu código la interpreta, ejecuta la función real y le devuelve el resultado para
+que redacte la respuesta final. El modelo es el cerebro que decide; el código es el cuerpo
+que ejecuta. **MCP** estandariza cómo se declaran y ejecutan esas tools (un "USB-C para AI
+tools").
+
+Formato de una tool (estilo ollama/OpenAI, el que consume LocalAgent):
+
+```json
+{
+  "type": "function",
+  "function": {
+    "name": "vault_search",
+    "description": "Busca semánticamente en las notas del vault del usuario.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {"type": "string", "description": "Consulta de búsqueda"}
+      },
+      "required": ["query"]
+    }
+  }
+}
+```
+
+El **loop** (el modelo puede encadenar varias tools antes de responder; hace falta un tope
+de rondas — en LocalAgent `max_rounds`):
+
+```python
+messages = [{"role": "user", "content": user_input}]
+for _ in range(MAX_ROUNDS):
+    resp = call_model(messages, tools=specs)
+    if resp.tool_calls:
+        for tc in resp.tool_calls:
+            result = execute_tool(tc.name, tc.arguments)
+            messages.append(tc.message)                       # lo que pidió el modelo
+            messages.append({"role": "tool", "content": result})  # lo que devolvió
+    else:
+        return resp.content                                   # respuesta final
+```
+
+> **En LocalAgent**: esto es exactamente `clients.chat_stream_with_tools` — resuelve las
+> rondas en streaming, ejecuta con `tools.execute` (locales) o `bridge.call` (MCP), y corta
+> por `max_rounds`.
+
+## F4. Memoria persistente
+
+Un LLM no recuerda nada entre conversaciones: cada chat empieza de cero. La memoria
+persistente guarda datos clave del usuario y los reinyecta. Un "cuaderno de notas" que el
+asistente lee antes de conversar.
+
+```
+FIN DE CONVERSACIÓN:
+  Chat → prompt "extraé datos memorables" → hechos → guardar
+
+INICIO DE CONVERSACIÓN:
+  Memoria → filtrar relevantes → inyectar en el system prompt
+```
+
+Estructura de un recuerdo y **prompt de extracción**:
+
+```json
+{"category": "proyecto", "content": "Publicó el repo libre-agent en GitHub", "created": "2026-07-18"}
+```
+
+```
+Analizá la conversación y extraé hechos memorables sobre el usuario. Solo lo que sirva a
+futuro. Reglas: no repitas lo ya conocido; categorizá (negocio, tecnología, interés,
+personal, proyecto); sé específico; ignorá saludos y datos temporales.
+Salida JSON: [{"category": "...", "content": "..."}]  ·  Si no hay nada nuevo: []
+```
+
+**Estrategias de recall:** inyectar todo (simple, gasta tokens, ok con pocos hechos) ·
+**embedding-based** (busca los hechos más relevantes a la pregunta — escalable) · por
+categorías.
+
+> **En LocalAgent**: usa la estrategia **embedding-based** vía mcp-memory (búsqueda
+> semántica en Qdrant). `memory.py` hace *auto-recall* en `build_system` y *auto-save* en
+> `finalize`; el modelo también puede llamar las tools `memory_*` explícitamente.
+
+## F5. Contexto y tokens
+
+Todo modelo tiene un **context window**: el máximo de texto por llamada (p.ej. 8k–32k
+tokens). Conversión útil: **~4 caracteres ≈ 1 token** en español. Es la "memoria de trabajo"
+del modelo; administrar ese presupuesto es trabajo del gateway.
+
+```
+SYSTEM PROMPT       ~800   instrucciones fijas
+MEMORIA INYECTADA   ~200   hechos del usuario
+TOOL DEFINITIONS    ~600   schemas de las tools
+HISTORIAL           variable
+MENSAJE ACTUAL      ~50
+MARGEN DE SEGURIDAD ~1000
+```
+
+**Estrategias al acercarse al límite:**
+
+| Estrategia | Cómo funciona | Trade-off |
+|---|---|---|
+| Sliding window | Borra los mensajes más viejos | Pierde contexto antiguo |
+| Resumen | Un LLM chico resume lo viejo | Pierde detalle, agrega latencia |
+| Truncar tool results | Corta resultados largos | Puede perder info |
+| Tool defs dinámicas | Solo inyecta tools relevantes | El modelo no sabe de las otras |
+
+> **En LocalAgent**: `clients.context_limit` lee el límite del modelo y `_ctx_estimate`
+> estima el uso; la UI muestra la barra `N / Nk ctx` en el header. El contexto se elige por
+> chat en el panel Avanzado (`num_ctx`).
+
+## F6. Visión
+
+La visión deja al asistente "ver" imágenes (screenshots, fotos de documentos, diagramas).
+Se implementa mandando la imagen en **base64** dentro del mismo mensaje `user`, con `content`
+como lista de partes.
+
+| Modelo | Visión |
+|---|---|
+| Qwen 2.5-VL | Sí, nativa (multilingüe) |
+| LLaVA | Sí, especializado |
+| Gemma 4 | Sí, nativa |
+| Llama 3.1 8B | No (solo texto) |
+
+```json
+{
+  "role": "user",
+  "content": [
+    {"type": "text", "text": "¿Qué muestra esta imagen?"},
+    {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBORw0KGgo…"}}
+  ]
+}
+```
+
+**Prácticas:** una imagen de 1 MB en base64 puede consumir ~1.000-2.000 tokens →
+**redimensioná** antes de enviar (máx ~1.200px). LocalAgent lista los modelos de visión
+aparte (`qwen2.5vl`, `llava`, …) detectándolos por su `kind`.
+
+---
+
 *LocalAgent · agente de IA local, libre y para todos (MIT).*
 [☕ Invitame un café](https://paypal.me/GermaniUicab)

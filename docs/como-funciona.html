@@ -100,6 +100,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <a class="nt" href="#s9">Seguridad</a>
   <a class="nt" href="#s10">Buenas prácticas</a>
   <a class="nt" href="#s11">Correrlo</a>
+  <a class="nt" href="#f1">Ollama/GGUF</a>
+  <a class="nt" href="#f2">RAG</a>
+  <a class="nt" href="#f3">Tool calling</a>
+  <a class="nt" href="#f4">Memoria</a>
+  <a class="nt" href="#f5">Contexto</a>
+  <a class="nt" href="#f6">Visión</a>
 </div></nav>
 
 <div class="mc">
@@ -299,6 +305,137 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 ./run-bot.sh            # bot de Telegram (requiere TELEGRAM_BOT_TOKEN)
 PORT=9000 ./run-spa.sh  # otro puerto</pre></div>
     <p>Con solo tener <strong>ollama</strong> y un modelo de chat ya funciona. Memoria (MCP), vault/RAG y Telegram son opcionales y degradan solos si no los configurás.</p>
+  </div></div>
+</section>
+
+<div class="ph"><div class="pn">Fundamentos</div><h2>Cómo funciona por dentro</h2><p>Los conceptos detrás de un asistente local. Algunos valores (VRAM, tokens) son ejemplos ilustrativos — ajustá a tu modelo y hardware.</p></div>
+
+<!-- F1 -->
+<section class="s" id="f1">
+  <div class="sh" onclick="tog('f1')"><div class="sn">F1</div><div class="si">📦</div><div class="sg"><div class="st">Ollama, GGUF y cuantización</div><div class="ss">Modelo + runtime, y cuánta VRAM necesitás</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <p>Para correr un LLM localmente hacen falta dos cosas: un <strong>modelo</strong> y un <strong>runtime</strong>. <strong>Ollama</strong> es el runtime: un servidor local (puerto <code>11434</code>) con API REST. LocalAgent le habla por <code>POST /api/chat</code> con streaming (<code>clients.py</code>).</p>
+    <p>Los modelos se comprimen con <strong>cuantización</strong> en formato <strong>GGUF</strong>: baja la precisión de los pesos para reducir tamaño y VRAM, a costa de algo de calidad. <code>Q2…Q8</code> = bits por peso; más alto, más calidad y más peso.</p>
+    <table class="t"><thead><tr><th>Cuantización</th><th>Tamaño (26B)</th><th>Calidad</th><th>VRAM aprox.</th></tr></thead><tbody>
+      <tr><td>Q8_0</td><td>~28 GB</td><td>Casi idéntica</td><td>~30 GB</td></tr>
+      <tr><td>Q5_K_M</td><td>~19 GB</td><td>Excelente</td><td>~20 GB</td></tr>
+      <tr><td>Q4_K_M</td><td>~16 GB</td><td>Muy buena</td><td>~17 GB</td></tr>
+      <tr><td>Q3_K_M</td><td>~12 GB</td><td>Aceptable</td><td>~13 GB</td></tr>
+      <tr><td>Q2_K</td><td>~10 GB</td><td>Pérdida notable</td><td>~11 GB</td></tr>
+    </tbody></table>
+    <div class="box info"><div class="bt">En LocalAgent</div><p>Si la GPU no alcanza, el modelo corre en CPU (más lento). Con <code>VRAM_GB</code> en <code>config.py</code>, <code>clients.list_local_models</code> calcula qué modelos entran y marca con ⚠️ CPU los que no.</p></div>
+  </div></div>
+</section>
+
+<!-- F2 -->
+<section class="s" id="f2">
+  <div class="sh" onclick="tog('f2')"><div class="sn">F2</div><div class="si">🔎</div><div class="sg"><div class="st">Embeddings y RAG</div><div class="ss">Buscar por significado, no por palabras</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <p>Un <strong>embedding</strong> convierte un texto en un <strong>vector</strong> que representa su <em>significado</em>. Textos parecidos quedan cerca en el espacio, así se busca <strong>por significado</strong> ("perro" y "can" caen cerca).</p>
+    <div class="cb"><div class="ch">búsqueda semántica</div><pre>"Cómo configurar Ollama en Linux"
+  → [modelo de embeddings] → [0.023, -0.451, 0.877, …] (p.ej. 768 dims)
+  → buscar los vectores más cercanos en el índice
+  → los N fragmentos más similares semánticamente</pre></div>
+    <p><strong>Chunking:</strong> el documento se parte en fragmentos de ~300-500 tokens con <strong>overlap</strong> (para no perder contexto en los bordes); cada chunk se convierte en embedding y se indexa.</p>
+    <table class="t"><thead><tr><th>Modelo de embeddings</th><th>Dims</th><th>Nota</th></tr></thead><tbody>
+      <tr><td>all-MiniLM-L6-v2</td><td>384</td><td>Rápido, buen balance</td></tr>
+      <tr><td>nomic-embed-text</td><td>768</td><td>Optimizado para RAG</td></tr>
+      <tr><td>bge-m3</td><td>1024</td><td>Multilingüe (español)</td></tr>
+    </tbody></table>
+    <div class="cb"><div class="ch">el pipeline RAG</div><pre>INDEXACIÓN (una vez):   Vault (.md) → chunker → embeddings → índice vectorial
+BÚSQUEDA (cada pregunta): pregunta → embedding → top-K → inyectar chunks en el prompt</pre></div>
+    <div class="box info"><div class="bt">En LocalAgent</div><p>El RAG del vault (<code>vault_search</code>) usa un corpus sobre <strong>Qdrant</strong> en vez de FAISS; la memoria de largo plazo (mcp-memory) también es Qdrant + embeddings de Ollama. El concepto es el mismo, cambia la pieza de almacenamiento.</p></div>
+  </div></div>
+</section>
+
+<!-- F3 -->
+<section class="s" id="f3">
+  <div class="sh" onclick="tog('f3')"><div class="sn">F3</div><div class="si">⚙️</div><div class="sg"><div class="st">Tool calling</div><div class="ss">El modelo pide, tu código ejecuta</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <p>El LLM <strong>no ejecuta nada</strong>: genera un <strong>JSON</strong> pidiendo llamar una función; tu código la ejecuta y le devuelve el resultado para que redacte la respuesta. El modelo decide, el código actúa. <strong>MCP</strong> estandariza cómo se declaran y ejecutan esas tools.</p>
+    <div class="cb"><div class="ch">definición de una tool (estilo ollama/OpenAI)</div><pre>{
+  "type": "function",
+  "function": {
+    "name": "vault_search",
+    "description": "Busca semánticamente en las notas del vault.",
+    "parameters": {
+      "type": "object",
+      "properties": { "query": {"type": "string", "description": "Consulta"} },
+      "required": ["query"]
+    }
+  }
+}</pre></div>
+    <div class="cb"><div class="ch">el loop (con tope de rondas)</div><pre>messages = [{"role": "user", "content": user_input}]
+for _ in range(MAX_ROUNDS):
+    resp = call_model(messages, tools=specs)
+    if resp.tool_calls:
+        for tc in resp.tool_calls:
+            result = execute_tool(tc.name, tc.arguments)
+            messages.append(tc.message)                          # lo que pidió
+            messages.append({"role":"tool","content":result})    # lo que devolvió
+    else:
+        return resp.content                                      # respuesta final</pre></div>
+    <div class="box info"><div class="bt">En LocalAgent</div><p>Es exactamente <code>clients.chat_stream_with_tools</code>: resuelve las rondas en streaming, ejecuta con <code>tools.execute</code> (locales) o <code>bridge.call</code> (MCP), y corta por <code>max_rounds</code>.</p></div>
+  </div></div>
+</section>
+
+<!-- F4 -->
+<section class="s" id="f4">
+  <div class="sh" onclick="tog('f4')"><div class="sn">F4</div><div class="si">💾</div><div class="sg"><div class="st">Memoria persistente</div><div class="ss">Extraer al final, inyectar al inicio</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <p>Un LLM no recuerda entre conversaciones: cada chat empieza de cero. La memoria persistente guarda datos clave del usuario y los reinyecta — un "cuaderno de notas" que el asistente lee antes de conversar.</p>
+    <div class="cb"><div class="ch">arquitectura (dos momentos)</div><pre>FIN:    chat → prompt "extraé datos memorables" → hechos → guardar
+INICIO: memoria → filtrar relevantes → inyectar en el system prompt</pre></div>
+    <div class="cb"><div class="ch">un recuerdo + prompt de extracción</div><pre>{"category": "proyecto", "content": "Publicó el repo libre-agent", "created": "2026-07-18"}
+
+"Extraé hechos memorables sobre el usuario. Solo lo útil a futuro. Categorizá
+ (negocio, tecnología, interés, personal, proyecto). Ignorá saludos/datos temporales.
+ Salida JSON: [{category, content}]  ·  Si no hay nada nuevo: []"</pre></div>
+    <p><strong>Estrategias de recall:</strong> inyectar todo (simple, gasta tokens) · <strong>embedding-based</strong> (busca los hechos más relevantes a la pregunta — escalable) · por categorías.</p>
+    <div class="box info"><div class="bt">En LocalAgent</div><p>Usa la estrategia embedding-based vía mcp-memory (búsqueda semántica en Qdrant). <code>memory.py</code> hace auto-recall en <code>build_system</code> y auto-save en <code>finalize</code>; el modelo también puede llamar las tools <code>memory_*</code>.</p></div>
+  </div></div>
+</section>
+
+<!-- F5 -->
+<section class="s" id="f5">
+  <div class="sh" onclick="tog('f5')"><div class="sn">F5</div><div class="si">🪟</div><div class="sg"><div class="st">Contexto y tokens</div><div class="ss">El presupuesto de la memoria de trabajo</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <p>Todo modelo tiene un <strong>context window</strong>: el máximo de texto por llamada (p.ej. 8k–32k tokens). Conversión útil: <strong>~4 caracteres ≈ 1 token</strong> en español. Administrar ese presupuesto es trabajo del gateway.</p>
+    <div class="cb"><div class="ch">composición del contexto (ejemplo)</div><pre>SYSTEM PROMPT       ~800   instrucciones fijas
+MEMORIA INYECTADA   ~200   hechos del usuario
+TOOL DEFINITIONS    ~600   schemas de las tools
+HISTORIAL           variable
+MENSAJE ACTUAL      ~50
+MARGEN DE SEGURIDAD ~1000</pre></div>
+    <table class="t"><thead><tr><th>Estrategia al llenar el contexto</th><th>Cómo</th><th>Trade-off</th></tr></thead><tbody>
+      <tr><td>Sliding window</td><td>Borra los mensajes más viejos</td><td>Pierde contexto antiguo</td></tr>
+      <tr><td>Resumen</td><td>Un LLM chico resume lo viejo</td><td>Pierde detalle + latencia</td></tr>
+      <tr><td>Truncar tool results</td><td>Corta resultados largos</td><td>Puede perder info</td></tr>
+      <tr><td>Tool defs dinámicas</td><td>Solo inyecta tools relevantes</td><td>El modelo no sabe de las otras</td></tr>
+    </tbody></table>
+    <div class="box info"><div class="bt">En LocalAgent</div><p><code>clients.context_limit</code> lee el límite del modelo y <code>_ctx_estimate</code> estima el uso; la UI muestra la barra <code>N / Nk ctx</code> en el header y el contexto se elige por chat en el panel Avanzado (<code>num_ctx</code>).</p></div>
+  </div></div>
+</section>
+
+<!-- F6 -->
+<section class="s" id="f6">
+  <div class="sh" onclick="tog('f6')"><div class="sn">F6</div><div class="si">👁️</div><div class="sg"><div class="st">Visión</div><div class="ss">Que el asistente "vea" imágenes</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sb"><div class="bi">
+    <p>La visión deja al asistente analizar imágenes (screenshots, fotos, diagramas). Se manda la imagen en <strong>base64</strong> dentro del mismo mensaje <code>user</code>, con <code>content</code> como lista de partes.</p>
+    <table class="t"><thead><tr><th>Modelo</th><th>Visión</th></tr></thead><tbody>
+      <tr><td>Qwen 2.5-VL</td><td>Sí, nativa (multilingüe)</td></tr>
+      <tr><td>LLaVA</td><td>Sí, especializado</td></tr>
+      <tr><td>Gemma 4</td><td>Sí, nativa</td></tr>
+      <tr><td>Llama 3.1 8B</td><td>No (solo texto)</td></tr>
+    </tbody></table>
+    <div class="cb"><div class="ch">mensaje multimodal</div><pre>{
+  "role": "user",
+  "content": [
+    {"type": "text", "text": "¿Qué muestra esta imagen?"},
+    {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBORw0KGgo…"}}
+  ]
+}</pre></div>
+    <div class="box warn"><div class="bt">Práctica</div><p>Una imagen de 1 MB en base64 puede consumir ~1.000-2.000 tokens → <strong>redimensioná</strong> antes de enviar (máx ~1.200px). LocalAgent lista los modelos de visión aparte (<code>qwen2.5vl</code>, <code>llava</code>) detectándolos por su <code>kind</code>.</p></div>
   </div></div>
 </section>
 
