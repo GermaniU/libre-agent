@@ -1,4 +1,4 @@
-"""Bot de Telegram de LibreAgent — chat con el modelo local + comandos de control.
+"""Bot de Telegram de LocalAgent — chat con el modelo local + comandos de control.
 
 Comandos: /status /model /ctx /new /mcp /help. Cualquier otro texto va al modelo
 (mismo soul y tools que la UI web). Solo responde al user de TELEGRAM_ALLOWED_USER.
@@ -143,7 +143,7 @@ def _ctx_line():
 def cmd_status():
     mcps = ", ".join(sorted(state["mcps"])) or "ninguno"
     corpus = "✅" if clients.corpus_ok() else "⚠️ sin conexión"
-    return (f"🧠 *LibreAgent*\n"
+    return (f"🧠 *LocalAgent*\n"
             f"Modelo: `{state['model']}`\n"
             f"{_ctx_line()}\n"
             f"Tokens de la sesión: {state['tokens']:,} · mensajes: {len(state['messages'])}\n"
@@ -209,7 +209,7 @@ def cmd_mcp(arg):
     return f"{action}\nSin MCPs activos."
 
 
-HELP = ("🧠 *LibreAgent Bot*\n"
+HELP = ("🧠 *LocalAgent Bot*\n"
         "/status — modelo, contexto, tokens, GPU/RAM\n"
         "/model — listar o cambiar modelo\n"
         "/ctx — barra de contexto\n"

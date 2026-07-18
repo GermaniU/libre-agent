@@ -162,7 +162,7 @@ def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None
 
 
 def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridge=None,
-                           use_tools=True, think=None):
+                           use_tools=True, think=None, options=None):
     """Igual que chat_with_tools pero en STREAMING: es un generador de eventos.
 
     Yields tuplas (kind, payload):
@@ -178,7 +178,7 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
     usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}
     for _ in range(max_rounds):
         payload = {"model": model, "messages": msgs, "stream": True, "keep_alive": "30m",
-                   "options": {"temperature": temperature}}
+                   "options": {"temperature": temperature, **(options or {})}}
         if specs:
             payload["tools"] = specs
         if think is not None:
@@ -207,6 +207,8 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
             if not line:
                 continue
             data = json.loads(line)
+            if data.get("error"):
+                raise RuntimeError(f"Ollama: {data['error']}")
             msg = data.get("message", {})
             tok = msg.get("content", "")
             if tok:
@@ -221,7 +223,7 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
         usage["total"] += step
         usage["gen"] += gen
         usage["rounds"] += 1
-        usage["ctx"] = _ctx_estimate(msgs + [{"role": "assistant", "content": content}], usage["total"])
+        usage["ctx"] = _ctx_estimate(msgs + [{"role": "assistant", "content": content}], step)
 
         if not tool_calls:
             yield ("done", {"reply": content, "calls": calls_log, "usage": usage})

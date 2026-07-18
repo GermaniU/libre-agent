@@ -1,4 +1,4 @@
-"""LibreAgent — espacio de trabajo/chat con modelos locales, tools y RAG sobre tu vault.
+"""LocalAgent — espacio de trabajo/chat con modelos locales, tools y RAG sobre tu vault.
 
 Todo corre en tu LAN: ollama + corpus/Qdrant (opcional). Cero tokens de nube.
 El modelo decide solo cuándo usar web, vault o generar HTML (ver soul.md).
@@ -19,7 +19,7 @@ import memory
 import store
 import trace
 
-st.set_page_config(page_title="LibreAgent", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="LocalAgent", page_icon="🧠", layout="wide")
 
 # ------------------------------------------------------------- tema (rediseño)
 # Capa visual sobre Streamlit: IBM Plex + acento terracota, burbujas de usuario,
@@ -149,7 +149,7 @@ if "sessions" not in st.session_state:
 
 # ------------------------------------------------------------- sidebar
 with st.sidebar:
-    st.title("🧠 LibreAgent")
+    st.title("🧠 LocalAgent")
     st.caption("Modelos locales · web · vault · HTML · sin nube")
 
     st.subheader("Espacios")
@@ -197,7 +197,7 @@ with st.sidebar:
              "lento. Apagado = respuestas ágiles. Se ignora solo si el modelo no razona.")
     use_memory = st.toggle(
         "💾 Memoria persistente", value=True,
-        help="Recuerda cosas tuyas entre sesiones (mcp-memory, namespace 'libreagent'): "
+        help="Recuerda cosas tuyas entre sesiones (mcp-memory, namespace 'localagent'): "
              "recall antes de responder + guardado automático de hechos duraderos.")
 
     # todo lo fino vive acá; el día a día no necesita tocar nada

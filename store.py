@@ -9,7 +9,7 @@ import sqlite3
 import threading
 import time
 
-DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "libreagent.db")
+DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "localagent.db")
 _lock = threading.Lock()
 
 
@@ -57,9 +57,13 @@ def delete_session(name):
 
 
 def rename_session(old, new):
+    """Devuelve False si el nombre destino ya existe o falla el update (no pisa sesiones)."""
     try:
         with _lock, _conn() as c:
+            if c.execute("SELECT 1 FROM sessions WHERE name=?", (new,)).fetchone():
+                return False
             c.execute("UPDATE sessions SET name=? WHERE name=?", (new, old))
             c.commit()
+            return True
     except Exception:
-        pass
+        return False

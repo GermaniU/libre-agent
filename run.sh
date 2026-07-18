@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Arranca LocalCowork. Crea venv la primera vez.
+# Arranca LocalAgent. Crea venv la primera vez.
 set -e
 cd "$(dirname "$0")"
 # venv sin pip = creación interrumpida (falta python3.12-venv) -> bootstrap con get-pip

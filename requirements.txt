@@ -1,6 +1,9 @@
 # Pineado a versiones probadas (estabilidad/reproducibilidad).
 # Para actualizar a propósito: subir una versión, probar, y re-freezar.
-streamlit==1.59.2
+streamlit==1.42.0
+starlette==0.40.0
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
 requests==2.34.2
 ddgs==9.14.4
 beautifulsoup4==4.15.0

@@ -10,7 +10,7 @@ import requests
 import clients
 import config
 
-UA = {"User-Agent": "Mozilla/5.0 (LibreAgent; +local)"}
+UA = {"User-Agent": "Mozilla/5.0 (LocalAgent; +local)"}
 
 
 # ---------------------------------------------------------------- impls

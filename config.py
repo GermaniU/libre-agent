@@ -1,4 +1,4 @@
-"""Configuración central de LibreAgent. Todo override por variable de entorno."""
+"""Configuración central de LocalAgent. Todo override por variable de entorno."""
 import os
 
 # --- Endpoints (todo en tu LAN, cero nube) ---
@@ -8,7 +8,7 @@ CORPUS_KEY = os.getenv("CORPUS_KEY", "dev-only-key-cambiar-en-prod")
 COMFYUI_URL = os.getenv("COMFYUI_URL", "http://localhost:8188")
 VAULT_DIR = os.getenv("VAULT_DIR", "/mnt/c/Sites/Data")  # vault físico de Obsidian (repo git)
 # Raíz donde el modelo puede crear proyectos/scripts (C:\Sites desde Windows).
-# Para aislar de tus repos existentes, apuntá a una subcarpeta, ej: /mnt/c/Sites/libreagent-projects
+# Para aislar de tus repos existentes, apuntá a una subcarpeta, ej: /mnt/c/Sites/localagent-projects
 WORKSPACE_DIR = os.getenv("WORKSPACE_DIR", "/mnt/c/Sites")
 
 # --- Límite de VRAM (ajustá VRAM_GB a tu GPU). Modelos > este umbral se parten a CPU. ---

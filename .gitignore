@@ -18,3 +18,4 @@ static/*.html
 
 # sistema
 .DS_Store
+mcp.json

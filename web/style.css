@@ -1,0 +1,80 @@
+/* LibreAgent SPA — tokens y estilos base extraídos de design/redesign.dc.html */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg0:#101014; --bg1:#16161B; --bg2:#1D1D24; --bg3:#26262E;
+  --bd:#2A2A33; --bd2:#3E3E4A; --tx:#ECECF1; --tx2:#A6A6B4; --tx3:#73737F;
+  --ac:#E17A54; --ac2:#EA8A66; --acbg:rgba(225,122,84,.13);
+  --ok:#4CAF82; --err:#E5555A; --errbg:rgba(229,85,90,.09);
+  --usr:#22222B; --code:#131318;
+  --ck:#C39AE8; --cs:#93C89A; --cf:#7FB3E8; --cc:#6E7681; --cn:#E8B368;
+  --cw:760px; --shadow:0 8px 24px rgba(0,0,0,.4);
+}
+
+.light {
+  --bg0:#F7F6F3; --bg1:#EFEEE9; --bg2:#FFFFFF; --bg3:#E8E7E1;
+  --bd:#E0DFD8; --bd2:#C6C5BD; --tx:#1D1D23; --tx2:#5D5D68; --tx3:#8F8F9A;
+  --ac:#C75F3D; --ac2:#B45435; --acbg:rgba(199,95,61,.10);
+  --ok:#2E8F63; --err:#C93A40; --errbg:rgba(201,58,64,.07);
+  --usr:#ECEBE4; --code:#F1F0EB;
+  --ck:#8A46C8; --cs:#3A7D44; --cf:#2563AB; --cc:#8A8F98; --cn:#A05A12;
+  --shadow:0 8px 24px rgba(30,30,40,.14);
+}
+
+* { box-sizing:border-box; scrollbar-width:thin; scrollbar-color:var(--bd2) transparent; }
+::-webkit-scrollbar { width:8px; height:8px; }
+::-webkit-scrollbar-thumb { background:var(--bd2); border-radius:4px; }
+
+html, body { margin:0; padding:0; height:100%; font-family:'IBM Plex Sans',sans-serif; background:var(--bg0); color:var(--tx); }
+a { color:var(--ac); text-decoration:none; }
+a:hover { color:var(--ac2); text-decoration:underline; }
+
+button, input, select, textarea { font-family:inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline:2px solid var(--ac); outline-offset:2px; }
+textarea { outline:none; }
+
+@keyframes lcBlink { 0%,80%,100%{opacity:.25} 40%{opacity:1} }
+@keyframes lcCursor { 0%,100%{opacity:1} 50%{opacity:0} }
+@keyframes lcIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+/* para el modal centrado: la animación debe preservar el translate(-50%,-50%) */
+@keyframes lcInModal { from{opacity:0;transform:translate(-50%,-48%)} to{opacity:1;transform:translate(-50%,-50%)} }
+@keyframes lcSlide { from{transform:translateX(100%)} to{transform:none} }
+@media (prefers-reduced-motion: reduce){ *{ animation:none!important; transition:none!important; } }
+
+#root { display:flex; height:100vh; overflow:hidden; position:relative; transition:background .2s; }
+
+/* utilidades */
+.flex { display:flex; }
+.col { display:flex; flex-direction:column; }
+.grow { flex:1; min-width:0; }
+.none { flex:none; }
+.ellipsis { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mono { font-family:'IBM Plex Mono',monospace; }
+.caption { font-size:11.5px; color:var(--tx3); }
+
+/* iconos SVG heredan color de texto */
+.svg-icon { display:block; }
+
+/* markdown básico renderizado */
+.msg-text p { margin:2px 0 12px; }
+.msg-text p:last-child { margin-bottom:2px; }
+.msg-text ul, .msg-text ol { margin:0 0 14px; padding-left:22px; display:flex; flex-direction:column; gap:5px; }
+.msg-text li > p { margin:0; }
+.msg-text hr { border:none; border-top:1px solid var(--bd); margin:18px 0; }
+.msg-text h1, .msg-text h2, .msg-text h3 { margin:0 0 8px; font-weight:600; letter-spacing:-.01em; color:var(--tx); }
+.msg-text h3 { font-size:17px; }
+.msg-text code { font-family:'IBM Plex Mono',monospace; font-size:13px; background:var(--bg3); border-radius:6px; padding:1px 7px; }
+.msg-text pre { margin:0 0 14px; background:var(--code); border:1px solid var(--bd); border-radius:10px; overflow-x:auto; font-family:'IBM Plex Mono',monospace; font-size:12.8px; line-height:1.6; }
+.msg-text pre code { background:transparent; border-radius:0; padding:0; }
+.msg-text table { border-collapse:collapse; width:100%; font-size:13.5px; }
+.msg-text th, .msg-text td { padding:8px 12px; border:1px solid var(--bd); }
+.msg-text thead th { background:var(--bg1); color:var(--tx2); font-weight:600; text-align:left; }
+.msg-text strong { color:var(--tx); }
+
+/* code block con header */
+.code-block { border:1px solid var(--bd); border-radius:10px; background:var(--code); overflow:hidden; margin:0 0 14px; }
+.code-header { display:flex; align-items:center; padding:7px 12px; border-bottom:1px solid var(--bd); }
+.code-lang { font-size:11.5px; color:var(--tx3); font-family:'IBM Plex Mono',monospace; }
+.code-copy { margin-left:auto; display:flex; align-items:center; gap:5px; border:none; background:transparent; color:var(--tx3); font-family:inherit; font-size:11.5px; cursor:pointer; padding:3px 6px; border-radius:6px; }
+.code-copy:hover { color:var(--tx); background:var(--bg3); }
+.code-block pre { margin:0; border:none; border-radius:0; padding:14px; }

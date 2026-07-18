@@ -1,0 +1,15 @@
+{
+  "//": "Copiá este archivo a mcp.json y declará solo los MCPs que quieras darle a LocalAgent.",
+  "//formato": "el mismo mcpServers de Claude (stdio con command/args/env, o http con url)",
+  "mcpServers": {
+    "ejemplo-stdio": {
+      "command": "python",
+      "args": ["-m", "mi_mcp_server"],
+      "env": {"MI_VAR": "valor"}
+    },
+    "ejemplo-http": {
+      "type": "http",
+      "url": "http://localhost:9000/mcp"
+    }
+  }
+}

@@ -1,4 +1,4 @@
-"""Memoria persistente de LibreAgent sobre mcp-memory, namespace 'libreagent'.
+"""Memoria persistente de LocalAgent sobre mcp-memory, namespace 'localagent'.
 
 El "latido" del núcleo: auto-recall antes de responder + auto-save después.
 mcp-memory (Qdrant) es el ÚNICO dueño del store — acá solo llamamos su API por el
@@ -10,7 +10,7 @@ import streamlit as st
 
 import mcp_bridge
 
-NAMESPACE = "libreagent"
+NAMESPACE = "localagent"
 _SERVER = "mcp-memory"
 _SEARCH = "mcp_memory__memory_search"
 _SAVE = "mcp_memory__memory_save"
@@ -32,7 +32,7 @@ def available():
 
 
 def recall(query, k=4, min_score=0.35):
-    """Hasta k memorias relevantes del namespace libreagent (lista de strings; [] si falla).
+    """Hasta k memorias relevantes del namespace localagent (lista de strings; [] si falla).
 
     El server (vía MCP) devuelve una lista JSON directa; toleramos también {"result": [...]}.
     """
@@ -59,14 +59,14 @@ def recall(query, k=4, min_score=0.35):
 
 
 def remember(content, tags=None):
-    """Guarda un hecho en el namespace libreagent (best-effort, no rompe el chat)."""
+    """Guarda un hecho en el namespace localagent (best-effort, no rompe el chat)."""
     b = _bridge()
     content = (content or "").strip()
     if not b or len(content) < 8:
         return False
     try:
         res = b.call(_SAVE, {"content": content, "namespace": NAMESPACE,
-                             "tags": tags or ["libreagent"]}, timeout=20)
+                             "tags": tags or ["localagent"]}, timeout=20)
         return not str(res).startswith("Error del tool")
     except Exception:
         return False

@@ -1,4 +1,7 @@
-"""Puente MCP: conecta los servers de ~/.claude.json y expone sus tools al modelo local.
+"""Puente MCP: conecta los servers del mcp.json del proyecto y expone sus tools al modelo local.
+
+Por defecto NO hay ningún MCP: LocalAgent solo usa los que declares en su propio
+mcp.json (mismo formato {"mcpServers": {...}} que Claude). Override con MCP_CONFIG.
 
 Las conexiones viven en un thread propio con su event loop (streamlit es sync).
 Cada tool queda namespaceada como  <server>__<tool>  para no chocar entre servers.
@@ -10,11 +13,14 @@ import re
 import threading
 from contextlib import AsyncExitStack
 
-CONFIG_PATH = os.path.expanduser("~/.claude.json")
+CONFIG_PATH = os.getenv(
+    "MCP_CONFIG",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "mcp.json"),
+)
 
 
 def list_configured_servers():
-    """Nombres de MCPs registrados en ~/.claude.json (sin conectar)."""
+    """Nombres de MCPs registrados en mcp.json (sin conectar). Sin archivo = ninguno."""
     try:
         with open(CONFIG_PATH) as f:
             return sorted(json.load(f).get("mcpServers", {}).keys())
