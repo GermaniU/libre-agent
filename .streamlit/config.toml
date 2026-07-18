@@ -1,0 +1,15 @@
+# Tema de LibreAgent — paleta del rediseño (dark, acento terracota).
+# La tipografía IBM Plex y los detalles finos se cargan por CSS en app.py.
+[theme]
+base = "dark"
+primaryColor = "#E17A54"
+backgroundColor = "#101014"
+secondaryBackgroundColor = "#16161B"
+textColor = "#ECECF1"
+font = "sans serif"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false

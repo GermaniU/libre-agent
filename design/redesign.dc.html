@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;height:100%}
+body{font-family:'IBM Plex Sans',sans-serif;background:#101014}
+a{color:#E17A54;text-decoration:none}a:hover{color:#EA8A66;text-decoration:underline}
+.lc{--bg0:#101014;--bg1:#16161B;--bg2:#1D1D24;--bg3:#26262E;--bd:#2A2A33;--bd2:#3E3E4A;--tx:#ECECF1;--tx2:#A6A6B4;--tx3:#73737F;--ac:#E17A54;--ac2:#EA8A66;--acbg:rgba(225,122,84,.13);--ok:#4CAF82;--err:#E5555A;--errbg:rgba(229,85,90,.09);--usr:#22222B;--code:#131318;--ck:#C39AE8;--cs:#93C89A;--cf:#7FB3E8;--cc:#6E7681;--cn:#E8B368;--cw:760px;--shadow:0 8px 24px rgba(0,0,0,.4)}
+.lc.light{--bg0:#F7F6F3;--bg1:#EFEEE9;--bg2:#FFFFFF;--bg3:#E8E7E1;--bd:#E0DFD8;--bd2:#C6C5BD;--tx:#1D1D23;--tx2:#5D5D68;--tx3:#8F8F9A;--ac:#C75F3D;--ac2:#B45435;--acbg:rgba(199,95,61,.10);--ok:#2E8F63;--err:#C93A40;--errbg:rgba(201,58,64,.07);--usr:#ECEBE4;--code:#F1F0EB;--ck:#8A46C8;--cs:#3A7D44;--cf:#2563AB;--cc:#8A8F98;--cn:#A05A12;--shadow:0 8px 24px rgba(30,30,40,.14)}
+.lc *{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--bd2) transparent}
+.lc ::-webkit-scrollbar{width:8px;height:8px}.lc ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:4px}
+.lc button:focus-visible,.lc [role="button"]:focus-visible,.lc input:focus-visible,.lc select:focus-visible,.lc textarea:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.lc textarea{outline:none}
+@keyframes lcBlink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@keyframes lcCursor{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes lcIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes lcSlide{from{transform:translateX(100%)}to{transform:none}}
+@media (prefers-reduced-motion: reduce){.lc *{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div class="lc {{ themeCls }}" ref="{{ rootRef }}" style="display:flex;height:100vh;background:var(--bg0);color:var(--tx);font-family:'IBM Plex Sans',sans-serif;font-size:15px;overflow:hidden;position:relative;transition:background .2s">
+
+  <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+  <aside data-screen-label="Sidebar" style="width:264px;min-width:264px;background:var(--bg1);border-right:1px solid var(--bd);display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 14px 10px">
+      <div style="width:28px;height:28px;border-radius:8px;background:var(--ac);display:flex;align-items:center;justify-content:center;flex:none">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"></path></svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:15px;letter-spacing:-.01em">LocalCowork</div>
+        <div style="font-size:11px;color:var(--tx3)">100% local · sin nube</div>
+      </div>
+      <button onClick="{{ toggleCollapse }}" aria-label="Colapsar sidebar" title="Colapsar" style="width:28px;height:28px;border:none;background:transparent;color:var(--tx3);border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:var(--bg3);color:var(--tx)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+      </button>
+    </div>
+    <div style="padding:6px 12px 10px;display:flex;gap:8px">
+      <button onClick="{{ newChat }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:36px;border:none;border-radius:10px;background:var(--ac);color:#fff;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer" style-hover="background:var(--ac2)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+        Nuevo chat
+      </button>
+      <button onClick="{{ clearChat }}" aria-label="Limpiar conversación actual" title="Limpiar conversación actual" style="width:36px;height:36px;border:1px solid var(--bd);border-radius:10px;background:transparent;color:var(--tx3);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--err);border-color:var(--err)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6"></path></svg>
+      </button>
+    </div>
+    <div style="padding:8px 20px 4px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Espacios</div>
+    <nav aria-label="Espacios" style="flex:1;overflow-y:auto;padding:2px 0 8px;display:flex;flex-direction:column;gap:1px">
+      <sc-for list="{{ spaces }}" as="s" hint-placeholder-count="4">
+        <div style="position:relative;margin:0 8px">
+          <sc-if value="{{ s.renaming }}" hint-placeholder-val="{{ false }}">
+            <input value="{{ renameVal }}" onChange="{{ onRenameInput }}" onKeyDown="{{ onRenameKey }}" onBlur="{{ commitRename }}" autoFocus="{{ true }}" aria-label="Renombrar espacio" style="width:100%;height:38px;border:1px solid var(--ac);border-radius:10px;background:var(--bg2);color:var(--tx);font-family:inherit;font-size:13.5px;padding:0 10px"></input>
+          </sc-if>
+          <sc-if value="{{ s.normal }}" hint-placeholder-val="{{ true }}">
+            <div role="button" tabIndex="0" onClick="{{ s.select }}" onKeyDown="{{ s.onRowKey }}" style="display:flex;align-items:center;gap:8px;padding:7px 8px 7px 10px;border-radius:10px;cursor:pointer;background:{{ s.bg }};transition:background .12s" style-hover="background:var(--bg3)">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13.5px;font-weight:500;color:{{ s.nameColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div>
+                <div style="font-size:11.5px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">{{ s.sub }}</div>
+              </div>
+              <span style="font-size:10.5px;color:var(--tx3);flex:none">{{ s.time }}</span>
+              <button onClick="{{ s.openMenu }}" aria-label="Opciones del espacio" style="width:24px;height:24px;flex:none;border:none;background:transparent;color:var(--tx3);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:var(--bg2);color:var(--tx)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg>
+              </button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ s.menuOpen }}" hint-placeholder-val="{{ false }}">
+            <div role="menu" style="position:absolute;right:4px;top:40px;z-index:40;background:var(--bg2);border:1px solid var(--bd);border-radius:10px;box-shadow:var(--shadow);padding:4px;min-width:150px;animation:lcIn .12s ease">
+              <button role="menuitem" onClick="{{ s.startRename }}" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;color:var(--tx);font-family:inherit;font-size:13px;padding:7px 10px;border-radius:7px;cursor:pointer;text-align:left" style-hover="background:var(--bg3)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5zM15 5l4 4"></path></svg>
+                Renombrar
+              </button>
+              <button role="menuitem" onClick="{{ s.del }}" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;color:var(--err);font-family:inherit;font-size:13px;padding:7px 10px;border-radius:7px;cursor:pointer;text-align:left" style-hover="background:var(--errbg)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"></path></svg>
+                Borrar
+              </button>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </nav>
+    <div style="border-top:1px solid var(--bd);padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--tx3)">
+      <span style="width:7px;height:7px;border-radius:50%;background:{{ statusDot }};flex:none"></span>
+      <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ statusText }}</span>
+      <button onClick="{{ openCfg }}" aria-label="Configuración" title="Configuración" style="width:26px;height:26px;flex:none;border:none;background:transparent;color:var(--tx3);border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:var(--bg3);color:var(--tx)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+      </button>
+    </div>
+  </aside>
+  </sc-if>
+
+  <sc-if value="{{ collapsed }}" hint-placeholder-val="{{ false }}">
+  <aside data-screen-label="Sidebar colapsado" style="width:60px;min-width:60px;background:var(--bg1);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:14px 0 12px;gap:4px">
+    <button onClick="{{ toggleCollapse }}" aria-label="Expandir sidebar" title="Expandir" style="width:32px;height:32px;border-radius:9px;background:var(--ac);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-bottom:6px">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"></path></svg>
+    </button>
+    <button onClick="{{ newChat }}" aria-label="Nuevo chat" title="Nuevo chat" style="width:36px;height:36px;border:1px solid var(--bd);border-radius:10px;background:transparent;color:var(--tx2);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-bottom:6px" style-hover="border-color:var(--ac);color:var(--ac)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+    </button>
+    <sc-for list="{{ spaces }}" as="s" hint-placeholder-count="4">
+      <button onClick="{{ s.select }}" title="{{ s.name }}" aria-label="{{ s.name }}" style="width:36px;height:36px;border-radius:10px;border:1px solid {{ s.railBd }};background:{{ s.bg }};color:{{ s.nameColor }};font-family:inherit;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:var(--bg3)">{{ s.initial }}</button>
+    </sc-for>
+    <div style="flex:1"></div>
+    <button onClick="{{ openCfg }}" aria-label="Configuración" title="Configuración" style="width:32px;height:32px;border:none;background:transparent;color:var(--tx3);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-bottom:4px" style-hover="background:var(--bg3);color:var(--tx)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+    </button>
+    <span title="{{ statusText }}" style="width:8px;height:8px;border-radius:50%;background:{{ statusDot }}"></span>
+  </aside>
+  </sc-if>
+
+  <main style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <header data-screen-label="Header" style="height:52px;flex:none;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--bd);background:var(--bg0)">
+      <h1 style="margin:0;font-size:14.5px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px">{{ activeName }}</h1>
+      <div style="position:relative">
+        <button onClick="{{ toggleModelMenu }}" aria-haspopup="listbox" aria-expanded="{{ modelMenu }}" style="display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg1);color:var(--tx2);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer" style-hover="border-color:var(--bd2);color:var(--tx)">
+          <span style="width:7px;height:7px;border-radius:50%;background:{{ curDot }};flex:none"></span>
+          {{ curShort }}
+          <span style="color:var(--tx3);font-size:11px">{{ curTag }}</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+        </button>
+        <sc-if value="{{ modelMenu }}" hint-placeholder-val="{{ false }}">
+          <div role="listbox" aria-label="Modelo local" style="position:absolute;left:0;top:36px;z-index:50;width:320px;background:var(--bg2);border:1px solid var(--bd);border-radius:12px;box-shadow:var(--shadow);padding:5px;animation:lcIn .12s ease">
+            <div style="padding:7px 10px 5px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3)">Modelo local · Ollama</div>
+            <sc-for list="{{ models }}" as="m" hint-placeholder-count="3">
+              <button role="option" aria-selected="{{ m.selected }}" onClick="{{ m.select }}" style="display:flex;align-items:center;gap:9px;width:100%;border:none;background:{{ m.bg }};font-family:inherit;padding:8px 10px;border-radius:8px;cursor:pointer;text-align:left" style-hover="background:var(--bg3)">
+                <span style="width:7px;height:7px;border-radius:50%;background:{{ m.dot }};flex:none"></span>
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;font-size:13px;color:var(--tx);font-family:'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.name }}</span>
+                  <span style="display:block;font-size:11.5px;color:var(--tx3);margin-top:1px">{{ m.tag }} · {{ m.status }}</span>
+                </span>
+                <span style="flex:none;font-size:11px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;background:var(--bg1);border:1px solid var(--bd);border-radius:6px;padding:2px 6px">{{ m.speed }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <div title="Contexto usado / disponible ({{ ctxUsed }} de {{ ctxMax }} tokens)" style="display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg1);color:var(--tx3);font-family:'IBM Plex Mono',monospace;font-size:11.5px">
+        <span style="width:44px;height:4px;border-radius:2px;background:var(--bg3);overflow:hidden;display:inline-block"><span style="display:block;height:100%;border-radius:2px;background:{{ ctxBarColor }};width:{{ ctxPct }};transition:width .3s"></span></span>
+        <span>{{ ctxUsed }} / {{ ctxMax }} ctx</span>
+      </div>
+      <div style="flex:1"></div>
+      <button onClick="{{ toggleTheme }}" aria-label="Cambiar tema" title="Tema claro/oscuro" style="width:32px;height:32px;border:none;background:transparent;color:var(--tx3);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:var(--bg2);color:var(--tx)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ themeIcon }}"></path></svg>
+      </button>
+      <button onClick="{{ openAdv }}" aria-label="Parámetros avanzados" title="Avanzado" style="width:32px;height:32px;border:none;background:transparent;color:var(--tx3);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:var(--bg2);color:var(--tx)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"></path><circle cx="16" cy="8" r="2.2"></circle><circle cx="8" cy="16" r="2.2"></circle></svg>
+      </button>
+      <button style="display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx2);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="border-color:var(--bd2);color:var(--tx)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V4M6 10l6-6 6 6M4 20h16"></path></svg>
+        Deploy
+      </button>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" aria-label="Más acciones" style="width:32px;height:32px;border:none;background:transparent;color:var(--tx3);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:var(--bg2);color:var(--tx)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="12" cy="19" r="1.7"></circle></svg>
+        </button>
+        <sc-if value="{{ moreMenu }}" hint-placeholder-val="{{ false }}">
+          <div role="menu" style="position:absolute;right:0;top:36px;z-index:50;background:var(--bg2);border:1px solid var(--bd);border-radius:10px;box-shadow:var(--shadow);padding:4px;min-width:180px;animation:lcIn .12s ease">
+            <button role="menuitem" onClick="{{ closeMenus }}" style="display:block;width:100%;border:none;background:transparent;color:var(--tx);font-family:inherit;font-size:13px;padding:7px 10px;border-radius:7px;cursor:pointer;text-align:left" style-hover="background:var(--bg3)">Exportar como .md</button>
+            <button role="menuitem" onClick="{{ closeMenus }}" style="display:block;width:100%;border:none;background:transparent;color:var(--tx);font-family:inherit;font-size:13px;padding:7px 10px;border-radius:7px;cursor:pointer;text-align:left" style-hover="background:var(--bg3)">Exportar como .html</button>
+            <button role="menuitem" onClick="{{ closeMenus }}" style="display:block;width:100%;border:none;background:transparent;color:var(--tx);font-family:inherit;font-size:13px;padding:7px 10px;border-radius:7px;cursor:pointer;text-align:left" style-hover="background:var(--bg3)">Copiar conversación</button>
+          </div>
+        </sc-if>
+      </div>
+    </header>
+
+    <div data-screen-label="Conversación" style="flex:1;overflow-y:auto;min-height:0">
+      <div style="max-width:var(--cw);margin:0 auto;padding:28px 24px 12px;display:flex;flex-direction:column;gap:24px">
+
+        <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Empty state" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:9vh 12px 4vh;animation:lcIn .25s ease">
+            <div style="width:44px;height:44px;border-radius:12px;background:var(--acbg);display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="var(--ac)"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"></path></svg>
+            </div>
+            <h2 style="margin:0 0 6px;font-size:22px;font-weight:600;letter-spacing:-.02em">¿En qué trabajamos hoy?</h2>
+            <p style="margin:0 0 26px;font-size:13.5px;color:var(--tx3)">Todo corre local: {{ curShort }} + corpus del vault. Nada sale de tu máquina.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:560px">
+              <sc-for list="{{ suggestions }}" as="g" hint-placeholder-count="4">
+                <button onClick="{{ g.go }}" style="border:1px solid var(--bd);border-radius:12px;background:var(--bg1);color:var(--tx2);font-family:inherit;font-size:13px;line-height:1.45;padding:12px 14px;text-align:left;cursor:pointer;transition:border-color .12s" style-hover="border-color:var(--ac);color:var(--tx)">{{ g.t }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showDemo }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;justify-content:flex-end">
+            <div style="max-width:82%;background:var(--usr);border:1px solid var(--bd);border-radius:16px 16px 4px 16px;padding:10px 14px;font-size:14.5px;line-height:1.55">Dame el estado de los labs y decime por cuál seguimos.</div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:22px;height:22px;border-radius:7px;background:var(--ac);display:flex;align-items:center;justify-content:center;flex:none">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"></path></svg>
+              </div>
+              <span style="font-size:12.5px;font-weight:600;color:var(--tx2)">LocalCowork</span>
+              <span style="font-size:11px;color:var(--tx3);font-family:'IBM Plex Mono',monospace">{{ curShort }}</span>
+            </div>
+
+            <div style="border:1px solid var(--bd);border-radius:10px;background:var(--bg1);overflow:hidden">
+              <button onClick="{{ toggleThink }}" aria-expanded="{{ thinkOpen }}" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;color:var(--tx3);font-family:inherit;font-size:12.5px;font-weight:500;padding:9px 12px;cursor:pointer;text-align:left" style-hover="color:var(--tx2)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l1.7 4.3L18 10l-4.3 1.7L12 16l-1.7-4.3L6 10l4.3-1.7zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"></path></svg>
+                Razonamiento · 12s
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;transition:transform .15s;transform:{{ thinkChev }}"><path d="M6 9l6 6 6-6"></path></svg>
+              </button>
+              <sc-if value="{{ thinkOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:0 12px 11px;font-size:13px;line-height:1.6;color:var(--tx3);border-top:1px dashed var(--bd);padding-top:9px">El usuario quiere un plan accionable. Los labs 1–3 ya tienen README y primer experimento; el 4 no. La continuación lógica del keylogger es Infil_Mechanics porque reutiliza los hooks de pynput que ya están documentados en el vault. Conviene proponer la estructura mínima y pedir confirmación antes de crear archivos.</div>
+              </sc-if>
+            </div>
+
+            <div style="font-size:15px;line-height:1.65;color:var(--tx)">
+              <p style="margin:2px 0 12px">Repasé el corpus del vault. Estado de los cuatro labs y mi recomendación:</p>
+              <div style="overflow-x:auto;margin:0 0 16px">
+                <table style="border-collapse:collapse;width:100%;font-size:13.5px">
+                  <thead><tr>
+                    <th style="text-align:left;padding:8px 12px;border:1px solid var(--bd);background:var(--bg1);color:var(--tx2);font-weight:600">Lab</th>
+                    <th style="text-align:left;padding:8px 12px;border:1px solid var(--bd);background:var(--bg1);color:var(--tx2);font-weight:600">Foco</th>
+                    <th style="text-align:left;padding:8px 12px;border:1px solid var(--bd);background:var(--bg1);color:var(--tx2);font-weight:600">Estado</th>
+                  </tr></thead>
+                  <tbody>
+                    <tr><td style="padding:8px 12px;border:1px solid var(--bd);font-family:'IBM Plex Mono',monospace;font-size:12.5px">Infil_Mechanics</td><td style="padding:8px 12px;border:1px solid var(--bd)">hooks de input, pynput</td><td style="padding:8px 12px;border:1px solid var(--bd);color:var(--ac);font-weight:500">← empezar acá</td></tr>
+                    <tr><td style="padding:8px 12px;border:1px solid var(--bd);font-family:'IBM Plex Mono',monospace;font-size:12.5px">Net_Guardian</td><td style="padding:8px 12px;border:1px solid var(--bd)">tráfico a IPs externas, Scapy</td><td style="padding:8px 12px;border:1px solid var(--bd);color:var(--tx3)">planificado</td></tr>
+                    <tr><td style="padding:8px 12px;border:1px solid var(--bd);font-family:'IBM Plex Mono',monospace;font-size:12.5px">FileSystem_Sentinel</td><td style="padding:8px 12px;border:1px solid var(--bd)">hashing + watchdog</td><td style="padding:8px 12px;border:1px solid var(--bd);color:var(--tx3)">planificado</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <h3 style="margin:0 0 8px;font-size:17px;font-weight:600;letter-spacing:-.01em">4. Lab <code style="font-family:'IBM Plex Mono',monospace;font-size:14px;background:var(--bg3);border-radius:6px;padding:1px 7px">FileSystem_Sentinel</code> (Auditoría de Integridad)</h3>
+              <ul style="margin:0 0 14px;padding-left:22px;display:flex;flex-direction:column;gap:5px">
+                <li><strong>Objetivo:</strong> detectar cambios no autorizados en archivos críticos del sistema o de proyectos.</li>
+                <li><strong>Primer experimento:</strong> un <strong>Integrity Checker</strong> que genere hashes SHA-256 de una carpeta y alerte si un archivo fue modificado, borrado o creado.</li>
+                <li><strong>Foco:</strong> hashing, Watchdog (eventos de FS), auditoría.</li>
+              </ul>
+              <hr style="border:none;border-top:1px solid var(--bd);margin:18px 0">
+              <h3 style="margin:0 0 8px;font-size:17px;font-weight:600;letter-spacing:-.01em">Mi recomendación para empezar YA</h3>
+              <p style="margin:0 0 10px">Arranquemos con <code style="font-family:'IBM Plex Mono',monospace;font-size:13px;background:var(--bg3);border-radius:6px;padding:1px 7px">Infil_Mechanics</code>: es la continuación lógica del keylogger, con enfoque de «estudio de hooks». Si estás de acuerdo, mi siguiente paso será:</p>
+              <ol style="margin:0 0 14px;padding-left:22px;display:flex;flex-direction:column;gap:5px">
+                <li><code style="font-family:'IBM Plex Mono',monospace;font-size:13px;background:var(--bg3);border-radius:6px;padding:1px 7px">make_dir</code> → <code style="font-family:'IBM Plex Mono',monospace;font-size:13px;background:var(--bg3);border-radius:6px;padding:1px 7px">C:\Sites\Lab_Experiments\Infil_Mechanics_InputMonitor</code></li>
+                <li>Crear el <code style="font-family:'IBM Plex Mono',monospace;font-size:13px;background:var(--bg3);border-radius:6px;padding:1px 7px">src/monitor.py</code> base.</li>
+                <li>Crear el <code style="font-family:'IBM Plex Mono',monospace;font-size:13px;background:var(--bg3);border-radius:6px;padding:1px 7px">README.md</code> con la estructura de laboratorio (Objetivo, Hipótesis, etc.).</li>
+              </ol>
+              <div style="border:1px solid var(--bd);border-radius:10px;background:var(--code);overflow:hidden;margin:0 0 14px">
+                <div style="display:flex;align-items:center;padding:7px 12px;border-bottom:1px solid var(--bd)">
+                  <span style="font-size:11.5px;color:var(--tx3);font-family:'IBM Plex Mono',monospace">python · baseline.py</span>
+                  <button onClick="{{ copyCode }}" style="margin-left:auto;display:flex;align-items:center;gap:5px;border:none;background:transparent;color:var(--tx3);font-family:inherit;font-size:11.5px;cursor:pointer;padding:3px 6px;border-radius:6px" style-hover="color:var(--tx);background:var(--bg3)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg>
+                    {{ copyLabel }}
+                  </button>
+                </div>
+                <pre style="margin:0;padding:14px;overflow-x:auto;font-family:'IBM Plex Mono',monospace;font-size:12.8px;line-height:1.6;color:var(--tx2)"><span style="color:var(--ck)">import</span> hashlib, time
+<span style="color:var(--ck)">from</span> pathlib <span style="color:var(--ck)">import</span> Path
+
+<span style="color:var(--ck)">def</span> <span style="color:var(--cf)">hash_tree</span>(root: Path) -&gt; <span style="color:var(--cf)">dict</span>:
+    <span style="color:var(--cc)"># SHA-256 de cada archivo bajo root</span>
+    <span style="color:var(--ck)">return</span> {p: hashlib.sha256(p.read_bytes()).hexdigest()
+            <span style="color:var(--ck)">for</span> p <span style="color:var(--ck)">in</span> root.rglob(<span style="color:var(--cs)">"*"</span>) <span style="color:var(--ck)">if</span> p.is_file()}
+
+baseline = hash_tree(Path(<span style="color:var(--cs)">"C:/Sites/Lab_Experiments"</span>))</pre>
+              </div>
+              <p style="margin:0">¿Te va este plan o querés saltar a otro dominio?</p>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:2px;margin-top:-2px">
+              <sc-if value="{{ metaOn }}" hint-placeholder-val="{{ true }}">
+                <span style="font-size:12px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;margin-right:10px">54.8s · 747 tokens · 13.6 tok/s</span>
+              </sc-if>
+              <button onClick="{{ copyDemo }}" aria-label="Copiar mensaje" title="Copiar" style="width:28px;height:28px;border:none;background:transparent;color:var(--tx3);border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:var(--bg2);color:var(--tx)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg></button>
+              <button aria-label="Regenerar respuesta" title="Regenerar" style="width:28px;height:28px;border:none;background:transparent;color:var(--tx3);border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:var(--bg2);color:var(--tx)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"></path></svg></button>
+              <button aria-label="Editar mensaje" title="Editar" style="width:28px;height:28px;border:none;background:transparent;color:var(--tx3);border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:var(--bg2);color:var(--tx)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5z"></path></svg></button>
+              <button aria-label="Buena respuesta" title="Buena respuesta" style="width:28px;height:28px;border:none;background:transparent;color:var(--tx3);border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:var(--bg2);color:var(--ok)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11M7 11l4-8a2.4 2.4 0 0 1 3 3l-1 4h5.5a2 2 0 0 1 2 2.4l-1.4 6a2 2 0 0 1-2 1.6H7"></path></svg></button>
+              <button aria-label="Mala respuesta" title="Mala respuesta" style="width:28px;height:28px;border:none;background:transparent;color:var(--tx3);border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:var(--bg2);color:var(--err)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="M7 10v11M7 11l4-8a2.4 2.4 0 0 1 3 3l-1 4h5.5a2 2 0 0 1 2 2.4l-1.4 6a2 2 0 0 1-2 1.6H7"></path></svg></button>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showVault }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;justify-content:flex-end">
+            <div style="max-width:82%;background:var(--usr);border:1px solid var(--bd);border-radius:16px 16px 4px 16px;padding:10px 14px;font-size:14.5px;line-height:1.55">Resumime lo nuevo del vault de esta semana.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:22px;height:22px;border-radius:7px;background:var(--ac);display:flex;align-items:center;justify-content:center;flex:none">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"></path></svg>
+              </div>
+              <span style="font-size:12.5px;font-weight:600;color:var(--tx2)">LocalCowork</span>
+              <span style="font-size:11px;color:var(--tx3);font-family:'IBM Plex Mono',monospace">{{ curShort }}</span>
+            </div>
+            <div style="font-size:15px;line-height:1.65;color:var(--tx)">
+              <p style="margin:2px 0 12px">Encontré <strong>6 notas nuevas</strong> esta semana. Lo esencial:</p>
+              <ul style="margin:0 0 14px;padding-left:22px;display:flex;flex-direction:column;gap:5px">
+                <li><strong>Labs:</strong> definiste criterios de éxito para <code style="font-family:'IBM Plex Mono',monospace;font-size:13px;background:var(--bg3);border-radius:6px;padding:1px 7px">Infil_Mechanics</code> y una lista de hooks de pynput a estudiar.</li>
+                <li><strong>Infra:</strong> apuntes sobre cuantización Q4 vs Q8 y su impacto en tok/s.</li>
+                <li><strong>Ideas:</strong> boceto de un dashboard de estado del corpus.</li>
+              </ul>
+              <div style="border:1px solid var(--bd);border-radius:10px;background:var(--bg1);padding:11px 14px;display:flex;gap:10px;margin:0 0 14px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><circle cx="12" cy="12" r="9"></circle><path d="M12 8h.01M12 11v5"></path></svg>
+                <div style="font-size:13.5px;line-height:1.6;color:var(--tx2)"><strong style="color:var(--tx)">Conexión detectada:</strong> la nota de cuantización sugiere probar el monitor del lab con Q4 para medir si los hooks pierden eventos bajo carga.</div>
+              </div>
+              <p style="margin:0">¿Quiero que arme el resumen semanal completo en una nota nueva del vault?</p>
+            </div>
+            <sc-if value="{{ metaOn }}" hint-placeholder-val="{{ true }}">
+              <span style="font-size:12px;color:var(--tx3);font-family:'IBM Plex Mono',monospace">12.4s · 214 tokens · 17.2 tok/s</span>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showError }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;justify-content:flex-end">
+            <div style="max-width:82%;background:var(--usr);border:1px solid var(--bd);border-radius:16px 16px 4px 16px;padding:10px 14px;font-size:14.5px;line-height:1.55">Retomá el scraper y agregale rate limiting.</div>
+          </div>
+          <div data-screen-label="Estado de error" style="border:1px solid var(--err);background:var(--errbg);border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;animation:lcIn .2s ease">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--err)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:600;color:var(--err);margin-bottom:3px">El modelo no respondió</div>
+              <div style="font-size:13.5px;line-height:1.55;color:var(--tx2)">Ollama no está disponible o el modelo se descargó de memoria. Verificá que <code style="font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--bg3);border-radius:5px;padding:1px 6px">ollama serve</code> esté corriendo y reintentá.</div>
+            </div>
+            <button onClick="{{ retry }}" style="flex:none;height:32px;padding:0 14px;border:1px solid var(--err);border-radius:8px;background:transparent;color:var(--err);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--err);color:#fff">Reintentar</button>
+          </div>
+        </sc-if>
+
+        <sc-for list="{{ dynMsgs }}" as="m" hint-placeholder-count="1">
+          <div style="animation:lcIn .2s ease">
+            <sc-if value="{{ m.isUser }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;justify-content:flex-end">
+                <div style="max-width:82%;background:var(--usr);border:1px solid var(--bd);border-radius:16px 16px 4px 16px;padding:10px 14px;font-size:14.5px;line-height:1.55;white-space:pre-wrap">{{ m.text }}</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ m.isAi }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:22px;height:22px;border-radius:7px;background:var(--ac);display:flex;align-items:center;justify-content:center;flex:none">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"></path></svg>
+                  </div>
+                  <span style="font-size:12.5px;font-weight:600;color:var(--tx2)">LocalCowork</span>
+                  <span style="font-size:11px;color:var(--tx3);font-family:'IBM Plex Mono',monospace">{{ m.model }}</span>
+                </div>
+                <sc-if value="{{ m.isError }}" hint-placeholder-val="{{ false }}">
+                  <div style="border:1px solid var(--err);background:var(--errbg);border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--err)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+                    <div style="flex:1">
+                      <div style="font-size:14px;font-weight:600;color:var(--err);margin-bottom:3px">Modelo no disponible</div>
+                      <div style="font-size:13.5px;line-height:1.55;color:var(--tx2)">{{ m.text }}</div>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ m.hasThink }}" hint-placeholder-val="{{ false }}">
+                  <div style="border:1px solid var(--bd);border-radius:10px;background:var(--bg1);padding:9px 12px">
+                    <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500;color:var(--tx3)">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l1.7 4.3L18 10l-4.3 1.7L12 16l-1.7-4.3L6 10l4.3-1.7zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"></path></svg>
+                      {{ m.thinkLabel }}
+                    </div>
+                    <sc-if value="{{ m.hasThinkText }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top:7px;padding-top:8px;border-top:1px dashed var(--bd);font-size:13px;line-height:1.6;color:var(--tx3)">{{ m.think }}</div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ m.showBody }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:15px;line-height:1.65;white-space:pre-wrap">{{ m.text }}<sc-if value="{{ m.streaming }}" hint-placeholder-val="{{ false }}"><span style="display:inline-block;width:8px;height:16px;background:var(--ac);border-radius:2px;margin-left:3px;vertical-align:text-bottom;animation:lcCursor .9s steps(1) infinite"></span></sc-if></div>
+                </sc-if>
+                <sc-if value="{{ m.showDots }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;gap:5px;padding:2px 0" aria-label="Generando respuesta">
+                    <span style="width:6px;height:6px;border-radius:50%;background:var(--tx3);animation:lcBlink 1.2s infinite"></span>
+                    <span style="width:6px;height:6px;border-radius:50%;background:var(--tx3);animation:lcBlink 1.2s infinite .2s"></span>
+                    <span style="width:6px;height:6px;border-radius:50%;background:var(--tx3);animation:lcBlink 1.2s infinite .4s"></span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ m.hasMeta }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:12px;color:var(--tx3);font-family:'IBM Plex Mono',monospace">{{ m.meta }}</span>
+                </sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div data-screen-label="Compositor" style="flex:none;padding:8px 24px 10px;background:var(--bg0)">
+      <div style="max-width:var(--cw);margin:0 auto">
+        <div style="background:var(--bg2);border:1px solid {{ composerBd }};border-radius:16px;padding:12px 12px 10px;transition:border-color .15s;box-shadow:0 2px 12px rgba(0,0,0,.12)">
+          <textarea ref="{{ taRef }}" value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onKey }}" onFocus="{{ onTaFocus }}" onBlur="{{ onTaBlur }}" rows="1" placeholder="Preguntá lo que sea — el modelo decide si usa web, vault o tools…" aria-label="Mensaje" style="display:block;width:100%;border:none;background:transparent;color:var(--tx);font-family:inherit;font-size:14.5px;line-height:1.5;resize:none;min-height:24px;max-height:200px;padding:2px 4px 8px"></textarea>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <sc-for list="{{ caps }}" as="c" hint-placeholder-count="5">
+              <button onClick="{{ c.click }}" title="{{ c.tip }}" aria-pressed="{{ c.on }}" style="display:flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:999px;font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer;border:1px solid {{ c.bd }};color:{{ c.fg }};background:{{ c.bg }};transition:all .12s">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ c.icon }}"></path></svg>
+                {{ c.label }}
+              </button>
+            </sc-for>
+            <div style="flex:1"></div>
+            <sc-if value="{{ hasDraft }}" hint-placeholder-val="{{ false }}">
+              <span style="font-size:11px;color:var(--tx3);font-family:'IBM Plex Mono',monospace">{{ draftCount }}</span>
+            </sc-if>
+            <sc-if value="{{ notSending }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ send }}" disabled="{{ sendDisabled }}" aria-label="Enviar mensaje" title="Enviar (Enter)" style="width:34px;height:34px;border:none;border-radius:10px;background:{{ sendBg }};color:{{ sendFg }};cursor:{{ sendCursor }};display:flex;align-items:center;justify-content:center;transition:background .15s" style-hover="background:{{ sendHoverBg }}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>
+              </button>
+            </sc-if>
+            <sc-if value="{{ sending }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ stop }}" aria-label="Detener generación" title="Detener" style="width:34px;height:34px;border:1px solid var(--bd2);border-radius:10px;background:var(--bg3);color:var(--tx);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="border-color:var(--err);color:var(--err)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+              </button>
+            </sc-if>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;padding:7px 6px 0;font-size:11px;color:var(--tx3)">
+          <span><kbd style="font-family:'IBM Plex Mono',monospace;font-size:10px;border:1px solid var(--bd);border-radius:4px;padding:1px 4px;background:var(--bg1)">Enter</kbd> envía · <kbd style="font-family:'IBM Plex Mono',monospace;font-size:10px;border:1px solid var(--bd);border-radius:4px;padding:1px 4px;background:var(--bg1)">Shift+Enter</kbd> salto de línea</span>
+          <span style="flex:1"></span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:{{ statusDot }}"></span>{{ statusText }}</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <sc-if value="{{ advOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeAdv }}" style="position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:60"></div>
+    <aside data-screen-label="Panel Avanzado" role="dialog" aria-label="Parámetros avanzados" style="position:absolute;top:0;right:0;bottom:0;width:340px;background:var(--bg1);border-left:1px solid var(--bd);z-index:70;display:flex;flex-direction:column;animation:lcSlide .2s ease;box-shadow:var(--shadow)">
+      <div style="display:flex;align-items:center;padding:16px 18px 12px;border-bottom:1px solid var(--bd)">
+        <div>
+          <div style="font-size:15px;font-weight:600">Avanzado</div>
+          <div style="font-size:11.5px;color:var(--tx3);margin-top:1px">Parámetros de {{ curShort }}</div>
+        </div>
+        <button onClick="{{ closeAdv }}" aria-label="Cerrar panel" style="margin-left:auto;width:30px;height:30px;border:none;background:transparent;color:var(--tx3);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:var(--bg3);color:var(--tx)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:20px">
+        <label style="display:block">
+          <span style="display:flex;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:8px">Temperatura<span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--tx)">{{ temp }}</span></span>
+          <input type="range" min="0" max="2" step="0.1" value="{{ temp }}" onChange="{{ onTemp }}" style="width:100%;accent-color:var(--ac)"></input>
+          <span style="display:block;font-size:11px;color:var(--tx3);margin-top:4px">Más alto = más creativo, menos predecible.</span>
+        </label>
+        <label style="display:block">
+          <span style="display:flex;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:8px">Top-p<span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--tx)">{{ topP }}</span></span>
+          <input type="range" min="0" max="1" step="0.05" value="{{ topP }}" onChange="{{ onTopP }}" style="width:100%;accent-color:var(--ac)"></input>
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <label style="display:block">
+            <span style="display:block;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">Máx. tokens</span>
+            <input type="number" value="{{ maxTok }}" onChange="{{ onMaxTok }}" style="width:100%;height:36px;border:1px solid var(--bd);border-radius:9px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:0 10px"></input>
+          </label>
+          <label style="display:block">
+            <span style="display:block;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">Contexto</span>
+            <select value="{{ ctx }}" onChange="{{ onCtx }}" style="width:100%;height:36px;border:1px solid var(--bd);border-radius:9px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:0 8px">
+              <option value="4k">4 096</option>
+              <option value="8k">8 192</option>
+              <option value="32k">32 768</option>
+            </select>
+          </label>
+        </div>
+        <label style="display:block">
+          <span style="display:block;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">System prompt</span>
+          <textarea value="{{ sysPrompt }}" onChange="{{ onSys }}" rows="6" style="width:100%;border:1px solid var(--bd);border-radius:10px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.55;padding:10px;resize:vertical"></textarea>
+        </label>
+      </div>
+      <div style="padding:14px 18px;border-top:1px solid var(--bd);display:flex;gap:10px">
+        <button onClick="{{ resetAdv }}" style="height:36px;padding:0 14px;border:1px solid var(--bd);border-radius:9px;background:transparent;color:var(--tx2);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer" style-hover="border-color:var(--bd2);color:var(--tx)">Restablecer</button>
+        <button onClick="{{ closeAdv }}" style="flex:1;height:36px;border:none;border-radius:9px;background:var(--ac);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:var(--ac2)">Listo</button>
+      </div>
+    </aside>
+  </sc-if>
+
+  <sc-if value="{{ cfgOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeCfg }}" style="position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:80"></div>
+    <div data-screen-label="Configuración" role="dialog" aria-label="Configuración" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:520px;max-width:92vw;max-height:86vh;overflow-y:auto;background:var(--bg1);border:1px solid var(--bd);border-radius:16px;z-index:90;box-shadow:var(--shadow);animation:lcIn .15s ease">
+      <div style="display:flex;align-items:center;padding:16px 20px 12px;border-bottom:1px solid var(--bd)">
+        <div style="font-size:15px;font-weight:600">Configuración</div>
+        <button onClick="{{ closeCfg }}" aria-label="Cerrar" style="margin-left:auto;width:30px;height:30px;border:none;background:transparent;color:var(--tx3);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:var(--bg3);color:var(--tx)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
+      </div>
+      <div style="display:flex;gap:2px;padding:8px 14px 0;border-bottom:1px solid var(--bd)">
+        <sc-for list="{{ cfgTabs }}" as="t" hint-placeholder-count="4">
+          <button onClick="{{ t.go }}" style="height:36px;padding:0 12px;border:none;background:transparent;color:{{ t.fg }};font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid {{ t.line }};margin-bottom:-1px" style-hover="color:var(--tx)">{{ t.label }}</button>
+        </sc-for>
+      </div>
+      <div style="padding:18px 20px;display:flex;flex-direction:column;gap:22px">
+        <sc-if value="{{ cfgGeneral }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Conexión</div>
+          <label style="display:block">
+            <span style="display:block;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">Endpoint de Ollama</span>
+            <input value="{{ endpoint }}" onChange="{{ onEndpoint }}" style="width:100%;height:36px;border:1px solid var(--bd);border-radius:9px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:0 10px"></input>
+          </label>
+          <label style="display:block">
+            <span style="display:block;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">Carpeta del vault (Obsidian)</span>
+            <input value="{{ vaultPath }}" onChange="{{ onVaultPath }}" style="width:100%;height:36px;border:1px solid var(--bd);border-radius:9px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:0 10px"></input>
+          </label>
+          <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg2);padding:10px 12px">
+            <span style="width:7px;height:7px;border-radius:50%;background:{{ corpusDot }};flex:none"></span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:500">{{ corpusTitle }}</div>
+              <div style="font-size:11.5px;color:var(--tx3)">{{ corpusInfo }}</div>
+            </div>
+            <button onClick="{{ reindex }}" style="height:30px;padding:0 12px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx2);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer" style-hover="border-color:var(--ac);color:var(--ac)">{{ reindexLabel }}</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">RAG</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:500;color:var(--tx2)">RAG sobre el corpus</div>
+              <div style="font-size:11.5px;color:var(--tx3)">Recupera contexto del vault en cada mensaje.</div>
+            </div>
+            <button role="switch" aria-checked="{{ ragOn }}" onClick="{{ toggleRag }}" style="width:36px;height:21px;border-radius:999px;border:none;cursor:pointer;background:{{ ragTgBg }};position:relative;transition:background .15s;flex:none">
+              <span style="position:absolute;top:2.5px;left:{{ ragKnob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s"></span>
+            </button>
+          </div>
+          <sc-if value="{{ ragOn }}" hint-placeholder-val="{{ true }}">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <label style="display:block">
+                <span style="display:block;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">Embeddings</span>
+                <select value="{{ ragModel }}" onChange="{{ onRagModel }}" style="width:100%;height:36px;border:1px solid var(--bd);border-radius:9px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12px;padding:0 8px">
+                  <option value="nomic-embed-text">nomic-embed-text</option>
+                  <option value="mxbai-embed-large">mxbai-embed-large</option>
+                  <option value="bge-m3">bge-m3</option>
+                </select>
+              </label>
+              <label style="display:block">
+                <span style="display:block;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">Top-k resultados</span>
+                <input type="number" min="1" max="12" value="{{ ragTopK }}" onChange="{{ onRagTopK }}" style="width:100%;height:36px;border:1px solid var(--bd);border-radius:9px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:0 10px"></input>
+              </label>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Apariencia</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="flex:1;font-size:13px;font-weight:500;color:var(--tx2)">Tema</span>
+            <div style="display:flex;border:1px solid var(--bd);border-radius:9px;overflow:hidden">
+              <button onClick="{{ setDark }}" style="height:30px;padding:0 14px;border:none;background:{{ darkBg }};color:{{ darkFg }};font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer">Oscuro</button>
+              <button onClick="{{ setLight }}" style="height:30px;padding:0 14px;border:none;border-left:1px solid var(--bd);background:{{ lightBg }};color:{{ lightFg }};font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer">Claro</button>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Comportamiento</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:500;color:var(--tx2)">Enter envía el mensaje</div>
+              <div style="font-size:11.5px;color:var(--tx3)">Si está apagado, Enter hace salto de línea.</div>
+            </div>
+            <button role="switch" aria-checked="{{ enterSends }}" onClick="{{ toggleEnter }}" style="width:36px;height:21px;border-radius:999px;border:none;cursor:pointer;background:{{ enterTgBg }};position:relative;transition:background .15s;flex:none">
+              <span style="position:absolute;top:2.5px;left:{{ enterKnob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s"></span>
+            </button>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:500;color:var(--tx2)">Mostrar metadata</div>
+              <div style="font-size:11.5px;color:var(--tx3)">Tiempo, tokens y tok/s bajo cada respuesta.</div>
+            </div>
+            <button role="switch" aria-checked="{{ metaShow }}" onClick="{{ toggleMetaShow }}" style="width:36px;height:21px;border-radius:999px;border:none;cursor:pointer;background:{{ metaTgBg }};position:relative;transition:background .15s;flex:none">
+              <span style="position:absolute;top:2.5px;left:{{ metaKnob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s"></span>
+            </button>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ cfgMcp }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:12.5px;color:var(--tx3);line-height:1.5">Servidores MCP disponibles para el agente. La definición vive en <code style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;background:var(--bg3);border-radius:5px;padding:1px 6px">~/.localcowork/mcp.json</code>.</div>
+          <sc-for list="{{ mcps }}" as="p" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg2);padding:10px 12px">
+              <span style="width:7px;height:7px;border-radius:50%;background:{{ p.dot }};flex:none"></span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:500;font-family:'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</div>
+                <div style="font-size:11.5px;color:var(--tx3)">{{ p.desc }}</div>
+              </div>
+              <span style="flex:none;font-size:11px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;background:var(--bg1);border:1px solid var(--bd);border-radius:6px;padding:2px 6px">{{ p.toolsN }} tools</span>
+              <button role="switch" aria-checked="{{ p.on }}" onClick="{{ p.toggle }}" aria-label="Activar {{ p.name }}" style="width:36px;height:21px;border-radius:999px;border:none;cursor:pointer;background:{{ p.tgBg }};position:relative;transition:background .15s;flex:none">
+                <span style="position:absolute;top:2.5px;left:{{ p.knob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s"></span>
+              </button>
+            </div>
+          </sc-for>
+          <sc-if value="{{ mcpAdding }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid var(--ac);border-radius:10px;background:var(--bg2);padding:12px;display:flex;flex-direction:column;gap:10px;animation:lcIn .12s ease">
+              <label style="display:block">
+                <span style="display:block;font-size:12.5px;font-weight:500;color:var(--tx2);margin-bottom:5px">Nombre</span>
+                <input value="{{ newMcpName }}" onChange="{{ onNewMcpName }}" placeholder="p. ej. git" autoFocus="{{ true }}" style="width:100%;height:34px;border:1px solid var(--bd);border-radius:8px;background:var(--bg1);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:0 10px"></input>
+              </label>
+              <label style="display:block">
+                <span style="display:block;font-size:12.5px;font-weight:500;color:var(--tx2);margin-bottom:5px">Comando</span>
+                <input value="{{ newMcpCmd }}" onChange="{{ onNewMcpCmd }}" placeholder="npx -y @modelcontextprotocol/server-git" style="width:100%;height:34px;border:1px solid var(--bd);border-radius:8px;background:var(--bg1);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:0 10px"></input>
+              </label>
+              <div style="display:flex;gap:8px">
+                <button onClick="{{ addMcp }}" disabled="{{ addMcpDisabled }}" style="height:30px;padding:0 14px;border:none;border-radius:8px;background:{{ addMcpBg }};color:{{ addMcpFg }};font-family:inherit;font-size:12px;font-weight:600;cursor:{{ addMcpCursor }}" style-hover="background:{{ addMcpHover }}">Agregar</button>
+                <button onClick="{{ cancelAddMcp }}" style="height:30px;padding:0 12px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx3);font-family:inherit;font-size:12px;cursor:pointer" style-hover="color:var(--tx)">Cancelar</button>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ mcpNotAdding }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ startAddMcp }}" style="height:38px;border:1px dashed var(--bd2);border-radius:10px;background:transparent;color:var(--tx3);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="border-color:var(--ac);color:var(--ac)">+ Agregar servidor MCP</button>
+          </sc-if>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ cfgAgent }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:12.5px;color:var(--tx3);line-height:1.5">Archivos que definen al agente. Se recargan en caliente al guardar.</div>
+          <sc-for list="{{ agFiles }}" as="f" hint-placeholder-count="3">
+            <div style="border:1px solid {{ f.bd }};border-radius:10px;background:var(--bg2);overflow:hidden">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 12px">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6"></path></svg>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:500;font-family:'IBM Plex Mono',monospace">{{ f.name }}</div>
+                  <div style="font-size:11.5px;color:var(--tx3)">{{ f.desc }} · {{ f.mod }}</div>
+                </div>
+                <button onClick="{{ f.edit }}" style="height:30px;padding:0 12px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx2);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;flex:none" style-hover="border-color:var(--ac);color:var(--ac)">{{ f.btnLabel }}</button>
+              </div>
+              <sc-if value="{{ f.open }}" hint-placeholder-val="{{ false }}">
+                <textarea value="{{ agDraft }}" onChange="{{ onAgDraft }}" rows="8" aria-label="Contenido de {{ f.name }}" style="display:block;width:100%;border:none;border-top:1px solid var(--bd);background:var(--bg1);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.6;padding:12px;resize:vertical"></textarea>
+                <div style="display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--bd)">
+                  <button onClick="{{ f.save }}" style="height:30px;padding:0 14px;border:none;border-radius:8px;background:var(--ac);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:var(--ac2)">Guardar</button>
+                  <button onClick="{{ f.cancel }}" style="height:30px;padding:0 12px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx3);font-family:inherit;font-size:12px;cursor:pointer" style-hover="color:var(--tx)">Cancelar</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ cfgTg }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg2);padding:10px 12px">
+            <span style="width:7px;height:7px;border-radius:50%;background:{{ tgDot }};flex:none"></span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:500">Bot de Telegram</div>
+              <div style="font-size:11.5px;color:var(--tx3)">{{ tgStatus }}</div>
+            </div>
+            <button role="switch" aria-checked="{{ tgOn }}" onClick="{{ toggleTg }}" aria-label="Activar Telegram" style="width:36px;height:21px;border-radius:999px;border:none;cursor:pointer;background:{{ tgTgBg }};position:relative;transition:background .15s;flex:none">
+              <span style="position:absolute;top:2.5px;left:{{ tgKnob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s"></span>
+            </button>
+          </div>
+          <label style="display:block">
+            <span style="display:block;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">Bot token</span>
+            <input value="{{ tgToken }}" onChange="{{ onTgToken }}" style="width:100%;height:36px;border:1px solid var(--bd);border-radius:9px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:0 10px"></input>
+          </label>
+          <label style="display:block">
+            <span style="display:block;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">Chat IDs permitidos</span>
+            <input value="{{ tgChats }}" onChange="{{ onTgChats }}" style="width:100%;height:36px;border:1px solid var(--bd);border-radius:9px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:0 10px"></input>
+            <span style="display:block;font-size:11px;color:var(--tx3);margin-top:4px">Separados por coma. Cualquier otro chat es ignorado.</span>
+          </label>
+          <div style="font-size:12px;color:var(--tx3);line-height:1.55;border:1px solid var(--bd);border-radius:10px;background:var(--bg1);padding:10px 12px">El agente responde por Telegram con las mismas tools, soul y memoria que acá. Requiere el servidor MCP <code style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--bg3);border-radius:5px;padding:1px 5px">telegram</code> activo.</div>
+        </div>
+        </sc-if>
+      </div>
+      <div style="padding:14px 20px;border-top:1px solid var(--bd);display:flex">
+        <button onClick="{{ closeCfg }}" style="flex:1;height:36px;border:none;border-radius:9px;background:var(--ac);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:var(--ac2)">Listo</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#E17A54&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#E17A54&quot;,&quot;#5B8DEF&quot;,&quot;#3FA98E&quot;,&quot;#B08ADB&quot;]},&quot;showMeta&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Conversación&quot;},&quot;chatWidth&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:760,&quot;min&quot;:640,&quot;max&quot;:920,&quot;step&quot;:20,&quot;unit&quot;:&quot;px&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Layout&quot;}}">
+class Component extends DCLogic {
+  state = {
+    theme: 'dark', collapsedSb: false, activeId: 'lab', advOpen: false,
+    modelMenu: false, moreMenu: false, menuId: null, renamingId: null, renameVal: '',
+    spaces: [
+      { id: 'lab', name: 'Labs de seguridad', time: 'ahora', sub: 'Mi recomendación para empezar YA' },
+      { id: 'vault', name: 'Notas del vault', time: 'ayer', sub: 'Resumen semanal pendiente' },
+      { id: 'scrap', name: 'Scraping v2', time: 'lun', sub: 'Error: modelo no disponible' },
+      { id: 'html', name: 'Landing del lab', time: '12 jul', sub: 'HTML generado · v3' },
+      { id: 'ideas', name: 'Ideas sueltas', time: '8 jul', sub: 'Sin mensajes' },
+    ],
+    caps: { web: true, vault: true, html: false, thinking: false, memoria: true },
+    modelId: 'gemma',
+    temp: 0.7, topP: 0.9, maxTok: 2048, ctx: '8k',
+    sysPrompt: 'Sos un copiloto técnico. Respondé en español rioplatense, con precisión y sin relleno. Usá el vault como fuente primaria.',
+    thinkOpen: false, draft: '', dyn: {}, cleared: {}, sending: false,
+    copied: false, taFocus: false,
+    cfgOpen: false, cfgTab: 'general', endpoint: 'http://localhost:11434', vaultPath: 'D:/Obsidian/Cowork',
+    metaShow: true, enterSends: true, reindexing: false,
+    mcpList: [
+      { id: 'fs', name: 'filesystem', desc: 'Lectura/escritura en carpetas permitidas', tools: 9, on: true },
+      { id: 'searx', name: 'searxng-web', desc: 'Búsqueda web local vía SearXNG', tools: 3, on: true },
+      { id: 'vault', name: 'obsidian-vault', desc: 'RAG y notas del vault', tools: 6, on: true },
+      { id: 'tg', name: 'telegram', desc: 'Bot: mensajes entrantes y salientes', tools: 4, on: true },
+      { id: 'pup', name: 'puppeteer', desc: 'Navegación headless para scraping', tools: 7, on: false },
+    ],
+    mcpAdding: false, newMcpName: '', newMcpCmd: '',
+    ragOn: true, ragModel: 'nomic-embed-text', ragTopK: 4,
+    agOpenId: null, agDraft: '',
+    agContents: {
+      'soul.md': '# Soul\nSos un copiloto técnico rioplatense. Directo, sin relleno.\nPriorizás el vault como fuente primaria.\nNunca inventás rutas ni comandos.',
+      'memory.md': '# Memory\n- Proyecto activo: Labs de seguridad (Infil_Mechanics)\n- Stack: Streamlit + Ollama + RAG sobre vault Obsidian\n- Preferencia: respuestas con plan numerado y criterios de éxito',
+      'tools.md': '# Tools\n- make_dir / write_file → filesystem\n- web_search → searxng-web\n- vault_query → obsidian-vault\n- tg_send / tg_poll → telegram',
+    },
+    tgOn: true, tgToken: '7231…:AAHq2f4Q••••••••', tgChats: '123456789',
+  };
+  AGDEFS = [
+    { name: 'soul.md', desc: 'Personalidad y reglas base', mod: 'hace 2 d' },
+    { name: 'memory.md', desc: 'Memoria persistente del agente', mod: 'hace 3 h' },
+    { name: 'tools.md', desc: 'Mapa de tools disponibles', mod: 'hace 5 d' },
+  ];
+  MODELS = [
+    { id: 'gemma', name: 'huihui_ai/gemma-4-abliterated', tag: 'e4b · 6.9 GB', status: 'cargado', speed: '~14 tok/s', short: 'gemma-4:e4b' },
+    { id: 'llama', name: 'llama3.3', tag: '8b · 4.7 GB', status: 'disponible', speed: '~22 tok/s', short: 'llama3.3:8b' },
+    { id: 'qwen', name: 'qwen2.5-coder', tag: '14b · 9.0 GB', status: 'disponible', speed: '~9 tok/s', short: 'qwen-coder:14b' },
+    { id: 'mixtral', name: 'mixtral', tag: '8x7b · 26 GB', status: 'no disponible', speed: '—', speedNote: 'VRAM insuficiente', short: 'mixtral:8x7b' },
+  ];
+  CAPDEFS = [
+    { k: 'web', label: 'Web', tip: 'Búsqueda web local (SearXNG)', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M3 12h18M12 3c-2.7 2.6-2.7 15.4 0 18M12 3c2.7 2.6 2.7 15.4 0 18' },
+    { k: 'vault', label: 'Vault', tip: 'RAG sobre el corpus de Obsidian', icon: 'M6 3h13v15H8a2 2 0 0 0-2 2V3M6 20a2 2 0 0 1 2-2h11' },
+    { k: 'html', label: 'HTML', tip: 'Generación de páginas HTML', icon: 'M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14' },
+    { k: 'thinking', label: 'Thinking', tip: 'Razonamiento extendido visible', icon: 'M12 4l1.7 4.3L18 10l-4.3 1.7L12 16l-1.7-4.3L6 10l4.3-1.7L12 4M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15' },
+    { k: 'memoria', label: 'Memoria', tip: 'Memoria persistente entre chats', icon: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3' },
+  ];
+  ANSWER = 'Perfecto, arranquemos por Infil_Mechanics. Primer paso: crear la carpeta C:\\Sites\\Lab_Experiments\\Infil_Mechanics_InputMonitor con src/monitor.py y un README con hipótesis y criterios de éxito.\n\nDespués indexo los apuntes del vault sobre pynput y te propongo los tres primeros hooks a estudiar. Avisame y genero la estructura completa.';
+  THINK = 'El usuario confirma el plan. Conviene empezar por la estructura mínima del lab y reutilizar los patrones del keylogger anterior que ya están documentados en el vault. No hace falta tocar la web para esto.';
+
+  componentDidMount() {
+    this._onDoc = () => { if (this.state.modelMenu || this.state.moreMenu || this.state.menuId) this.setState({ modelMenu: false, moreMenu: false, menuId: null }); };
+    document.addEventListener('click', this._onDoc);
+    this._applyVars();
+  }
+  componentDidUpdate() { this._applyVars(); }
+  componentWillUnmount() { document.removeEventListener('click', this._onDoc); clearInterval(this._timer); }
+  _applyVars() {
+    if (!this._root) return;
+    const ac = this.props.accent ?? '#E17A54';
+    this._root.style.setProperty('--ac', ac);
+    this._root.style.setProperty('--ac2', ac);
+    this._root.style.setProperty('--acbg', ac + '21');
+    this._root.style.setProperty('--cw', (this.props.chatWidth ?? 760) + 'px');
+  }
+  curModel() { return this.MODELS.find(m => m.id === this.state.modelId); }
+  dotFor(st) { return st === 'cargado' ? 'var(--ok)' : st === 'disponible' ? 'var(--tx3)' : 'var(--err)'; }
+  dynFor(id) { return this.state.dyn[id] || []; }
+  pushDyn(id, msg) { this.setState(s => ({ dyn: { ...s.dyn, [id]: [...(s.dyn[id] || []), msg] } })); }
+  patchLast(id, patch) {
+    this.setState(s => {
+      const arr = [...(s.dyn[id] || [])];
+      arr[arr.length - 1] = { ...arr[arr.length - 1], ...patch };
+      return { dyn: { ...s.dyn, [id]: arr } };
+    });
+  }
+  sendText(text) {
+    const id = this.state.activeId, model = this.curModel();
+    this.pushDyn(id, { role: 'user', text });
+    this.setState({ draft: '', sending: true });
+    if (this._ta) { this._ta.style.height = 'auto'; }
+    if (model.status === 'no disponible') {
+      setTimeout(() => {
+        this.pushDyn(id, { role: 'ai', error: true, model: model.short, text: 'mixtral:8x7b requiere ~26 GB y no entra en la VRAM disponible. Elegí otro modelo del selector o liberá memoria con «ollama stop».' });
+        this.setState({ sending: false });
+      }, 700);
+      return;
+    }
+    const useThink = this.state.caps.thinking;
+    this.pushDyn(id, { role: 'ai', text: '', think: '', model: model.short, streaming: true, phase: useThink ? 'think' : 'answer', useThink });
+    const tWords = this.THINK.split(' '), aWords = this.ANSWER.split(' ');
+    let ti = 0, ai = 0; const t0 = Date.now();
+    clearInterval(this._timer);
+    this._timer = setInterval(() => {
+      const last = (this.state.dyn[id] || [])[ (this.state.dyn[id] || []).length - 1 ];
+      if (!last || !last.streaming) { clearInterval(this._timer); return; }
+      if (useThink && ti < tWords.length) {
+        ti += 2; this.patchLast(id, { think: tWords.slice(0, ti).join(' ') });
+      } else if (ai < aWords.length) {
+        ai += 2; this.patchLast(id, { phase: 'answer', text: aWords.slice(0, ai).join(' ') });
+      } else {
+        clearInterval(this._timer);
+        const secs = (Date.now() - t0) / 1000, tok = Math.round(aWords.length * 1.35);
+        this.patchLast(id, { streaming: false, meta: secs.toFixed(1) + 's · ' + tok + ' tokens · ' + (tok / secs).toFixed(1) + ' tok/s' });
+        this.setState({ sending: false });
+      }
+    }, 90);
+  }
+  renderVals() {
+    const s = this.state, model = this.curModel();
+    const spaces = s.spaces.map(sp => {
+      const active = sp.id === s.activeId;
+      return {
+        ...sp, active,
+        renaming: s.renamingId === sp.id,
+        normal: s.renamingId !== sp.id,
+        menuOpen: s.menuId === sp.id,
+        bg: active ? 'var(--bg3)' : 'transparent',
+        railBd: active ? 'var(--ac)' : 'var(--bd)',
+        nameColor: active ? 'var(--tx)' : 'var(--tx2)',
+        initial: sp.name.trim().charAt(0).toUpperCase(),
+        select: () => this.setState({ activeId: sp.id, menuId: null, thinkOpen: false }),
+        onRowKey: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.setState({ activeId: sp.id, menuId: null }); } },
+        openMenu: (e) => { e.stopPropagation(); this.setState({ menuId: s.menuId === sp.id ? null : sp.id }); },
+        startRename: (e) => { e.stopPropagation(); this.setState({ renamingId: sp.id, renameVal: sp.name, menuId: null }); },
+        del: (e) => {
+          e.stopPropagation();
+          this.setState(st => {
+            const rest = st.spaces.filter(x => x.id !== sp.id);
+            return { spaces: rest, menuId: null, activeId: st.activeId === sp.id ? (rest[0] ? rest[0].id : null) : st.activeId };
+          });
+        },
+      };
+    });
+    const dynMsgs = this.dynFor(s.activeId).map(m => ({
+      ...m,
+      isUser: m.role === 'user',
+      isAi: m.role === 'ai',
+      isError: !!m.error,
+      hasThink: !!m.useThink,
+      hasThinkText: !!m.think,
+      thinkLabel: m.streaming && m.phase === 'think' ? 'Razonando…' : 'Razonamiento',
+      showBody: !m.error && (!!m.text || (m.streaming && m.phase === 'answer')),
+      showDots: !!m.streaming && !m.text && m.phase !== 'think' ? !m.text : (m.streaming && m.phase === 'answer' && !m.text),
+      hasMeta: !!m.meta && (this.props.showMeta ?? true) && this.state.metaShow,
+    }));
+    const showDemo = s.activeId === 'lab' && !s.cleared.lab;
+    const showError = s.activeId === 'scrap' && !s.cleared.scrap;
+    const showVault = s.activeId === 'vault' && !s.cleared.vault;
+    const ctxMaxTok = { '4k': 4096, '8k': 8192, '32k': 32768 }[s.ctx] || 8192;
+    const baseUsed = { lab: 2870, scrap: 640, vault: 1210 }[s.activeId] || 0;
+    const dynUsed = this.dynFor(s.activeId).reduce((n, m) => n + Math.round(((m.text || '').split(' ').length + ((m.think || '').split(' ').length)) * 1.35), 0);
+    const ctxUsedTok = Math.min((showDemo || showError || showVault ? baseUsed : 0) + dynUsed + 180, ctxMaxTok);
+    const ctxRatio = ctxUsedTok / ctxMaxTok;
+    const metaOn = (this.props.showMeta ?? true) && s.metaShow;
+    const active = s.spaces.find(x => x.id === s.activeId);
+    const toolsOn = ['web', 'vault', 'html'].filter(k => s.caps[k]).length;
+    const modelDown = model.status === 'no disponible';
+    const draftOk = s.draft.trim().length > 0;
+    return {
+      themeCls: s.theme === 'light' ? 'light' : '',
+      rootRef: el => { this._root = el; this._applyVars(); },
+      taRef: el => { this._ta = el; },
+      expanded: !s.collapsedSb, collapsed: s.collapsedSb,
+      toggleCollapse: () => this.setState(st => ({ collapsedSb: !st.collapsedSb })),
+      toggleTheme: () => this.setState(st => ({ theme: st.theme === 'dark' ? 'light' : 'dark' })),
+      themeIcon: s.theme === 'dark'
+        ? 'M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8'
+        : 'M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8',
+      spaces,
+      renameVal: s.renameVal,
+      onRenameInput: e => this.setState({ renameVal: e.target.value }),
+      onRenameKey: e => { if (e.key === 'Enter') this._commitRename(); if (e.key === 'Escape') this.setState({ renamingId: null }); },
+      commitRename: () => this._commitRename(),
+      newChat: () => {
+        const id = 'c' + Date.now();
+        this.setState(st => ({ spaces: [{ id, name: 'Chat nuevo', time: 'ahora', sub: 'Sin mensajes' }, ...st.spaces], activeId: id }));
+      },
+      clearChat: () => this.setState(st => ({ cleared: { ...st.cleared, [st.activeId]: true }, dyn: { ...st.dyn, [st.activeId]: [] } })),
+      activeName: active ? active.name : 'Sin espacios',
+      models: this.MODELS.map(m => ({
+        ...m, selected: m.id === s.modelId,
+        bg: m.id === s.modelId ? 'var(--bg3)' : 'transparent',
+        dot: this.dotFor(m.status),
+        select: (e) => { e.stopPropagation(); this.setState({ modelId: m.id, modelMenu: false }); },
+      })),
+      modelMenu: s.modelMenu, moreMenu: s.moreMenu,
+      toggleModelMenu: e => { e.stopPropagation(); this.setState(st => ({ modelMenu: !st.modelMenu, moreMenu: false })); },
+      toggleMore: e => { e.stopPropagation(); this.setState(st => ({ moreMenu: !st.moreMenu, modelMenu: false })); },
+      closeMenus: () => this.setState({ modelMenu: false, moreMenu: false, menuId: null }),
+      curShort: model.short, curTag: model.tag, curDot: this.dotFor(model.status),
+      advOpen: s.advOpen,
+      openAdv: () => this.setState({ advOpen: true }),
+      closeAdv: () => this.setState({ advOpen: false }),
+      temp: s.temp, topP: s.topP, maxTok: s.maxTok, ctx: s.ctx, sysPrompt: s.sysPrompt,
+      onTemp: e => this.setState({ temp: parseFloat(e.target.value) }),
+      onTopP: e => this.setState({ topP: parseFloat(e.target.value) }),
+      onMaxTok: e => this.setState({ maxTok: parseInt(e.target.value, 10) || 0 }),
+      onCtx: e => this.setState({ ctx: e.target.value }),
+      onSys: e => this.setState({ sysPrompt: e.target.value }),
+      resetAdv: () => this.setState({ temp: 0.7, topP: 0.9, maxTok: 2048, ctx: '8k' }),
+      caps: this.CAPDEFS.map(c => ({
+        ...c, on: s.caps[c.k],
+        bd: s.caps[c.k] ? 'var(--ac)' : 'var(--bd)',
+        fg: s.caps[c.k] ? 'var(--ac)' : 'var(--tx3)',
+        bg: s.caps[c.k] ? 'var(--acbg)' : 'transparent',
+        click: () => this.setState(st => ({ caps: { ...st.caps, [c.k]: !st.caps[c.k] } })),
+      })),
+      isEmpty: !showDemo && !showError && !showVault && dynMsgs.length === 0,
+      showDemo, showError, showVault, dynMsgs,
+      ctxUsed: ctxUsedTok >= 1000 ? (ctxUsedTok / 1000).toFixed(1) + 'k' : '' + ctxUsedTok,
+      ctxMax: s.ctx,
+      ctxPct: Math.max(Math.round(ctxRatio * 100), 3) + '%',
+      ctxBarColor: ctxRatio > 0.85 ? 'var(--err)' : ctxRatio > 0.6 ? 'var(--cn)' : 'var(--ac)',
+      cfgOpen: s.cfgOpen,
+      openCfg: () => this.setState({ cfgOpen: true, menuId: null }),
+      closeCfg: () => this.setState({ cfgOpen: false, agOpenId: null }),
+      cfgTabs: [
+        { id: 'general', label: 'General' }, { id: 'mcp', label: 'MCPs' },
+        { id: 'agent', label: 'Agente' }, { id: 'tg', label: 'Telegram' },
+      ].map(t => ({
+        ...t,
+        go: () => this.setState({ cfgTab: t.id }),
+        fg: s.cfgTab === t.id ? 'var(--tx)' : 'var(--tx3)',
+        line: s.cfgTab === t.id ? 'var(--ac)' : 'transparent',
+      })),
+      cfgGeneral: s.cfgTab === 'general', cfgMcp: s.cfgTab === 'mcp',
+      cfgAgent: s.cfgTab === 'agent', cfgTg: s.cfgTab === 'tg',
+      mcps: s.mcpList.map(p => ({
+        ...p,
+        toolsN: p.tools,
+        dot: p.on ? 'var(--ok)' : 'var(--tx3)',
+        tgBg: p.on ? 'var(--ac)' : 'var(--bg3)',
+        knob: p.on ? '17.5px' : '2.5px',
+        toggle: () => this.setState(st => ({ mcpList: st.mcpList.map(x => x.id === p.id ? { ...x, on: !x.on } : x) })),
+      })),
+      mcpAdding: s.mcpAdding, mcpNotAdding: !s.mcpAdding,
+      startAddMcp: () => this.setState({ mcpAdding: true, newMcpName: '', newMcpCmd: '' }),
+      cancelAddMcp: () => this.setState({ mcpAdding: false }),
+      newMcpName: s.newMcpName, newMcpCmd: s.newMcpCmd,
+      onNewMcpName: e => this.setState({ newMcpName: e.target.value }),
+      onNewMcpCmd: e => this.setState({ newMcpCmd: e.target.value }),
+      addMcpDisabled: !s.newMcpName.trim(),
+      addMcpBg: s.newMcpName.trim() ? 'var(--ac)' : 'var(--bg3)',
+      addMcpHover: s.newMcpName.trim() ? 'var(--ac2)' : 'var(--bg3)',
+      addMcpFg: s.newMcpName.trim() ? '#fff' : 'var(--tx3)',
+      addMcpCursor: s.newMcpName.trim() ? 'pointer' : 'default',
+      addMcp: () => {
+        const name = this.state.newMcpName.trim();
+        if (!name) return;
+        this.setState(st => ({
+          mcpList: [...st.mcpList, { id: 'x' + Date.now(), name, desc: st.newMcpCmd.trim() || 'Servidor personalizado', tools: '?', on: true }],
+          mcpAdding: false, newMcpName: '', newMcpCmd: '',
+        }));
+      },
+      ragOn: s.ragOn,
+      toggleRag: () => this.setState(st => ({ ragOn: !st.ragOn })),
+      ragTgBg: s.ragOn ? 'var(--ac)' : 'var(--bg3)',
+      ragKnob: s.ragOn ? '17.5px' : '2.5px',
+      ragModel: s.ragModel, ragTopK: s.ragTopK,
+      onRagModel: e => this.setState({ ragModel: e.target.value }),
+      onRagTopK: e => this.setState({ ragTopK: parseInt(e.target.value, 10) || 1 }),
+      corpusDot: s.reindexing ? 'var(--cn)' : !s.vaultPath.trim() ? 'var(--err)' : !s.ragOn ? 'var(--tx3)' : 'var(--ok)',
+      corpusTitle: !s.vaultPath.trim() ? 'Sin corpus configurado' : 'Corpus indexado',
+      agFiles: this.AGDEFS.map(f => {
+        const open = s.agOpenId === f.name;
+        return {
+          ...f, open,
+          bd: open ? 'var(--ac)' : 'var(--bd)',
+          btnLabel: open ? 'Cerrar' : 'Editar',
+          edit: () => this.setState(st => open ? { agOpenId: null } : { agOpenId: f.name, agDraft: st.agContents[f.name] }),
+          save: () => this.setState(st => ({ agContents: { ...st.agContents, [f.name]: st.agDraft }, agOpenId: null })),
+          cancel: () => this.setState({ agOpenId: null }),
+        };
+      }),
+      agDraft: s.agDraft,
+      onAgDraft: e => this.setState({ agDraft: e.target.value }),
+      tgOn: s.tgOn,
+      toggleTg: () => this.setState(st => ({ tgOn: !st.tgOn })),
+      tgTgBg: s.tgOn ? 'var(--ac)' : 'var(--bg3)',
+      tgKnob: s.tgOn ? '17.5px' : '2.5px',
+      tgDot: s.tgOn ? 'var(--ok)' : 'var(--tx3)',
+      tgStatus: s.tgOn ? '@localcowork_bot conectado · último mensaje hace 18 min' : 'Desconectado',
+      tgToken: s.tgToken, tgChats: s.tgChats,
+      onTgToken: e => this.setState({ tgToken: e.target.value }),
+      onTgChats: e => this.setState({ tgChats: e.target.value }),
+      endpoint: s.endpoint, vaultPath: s.vaultPath,
+      onEndpoint: e => this.setState({ endpoint: e.target.value }),
+      onVaultPath: e => this.setState({ vaultPath: e.target.value }),
+      corpusInfo: s.reindexing ? 'Reindexando el corpus…' : !s.vaultPath.trim() ? 'Indicá la carpeta del vault para indexarlo' : s.ragOn ? '1.240 notas · última indexación hace 2 h' : '1.240 notas · RAG desactivado',
+      reindexLabel: s.reindexing ? 'Indexando…' : 'Reindexar',
+      reindex: () => { if (!this.state.reindexing) { this.setState({ reindexing: true }); setTimeout(() => this.setState({ reindexing: false }), 1800); } },
+      setDark: () => this.setState({ theme: 'dark' }),
+      setLight: () => this.setState({ theme: 'light' }),
+      darkBg: s.theme === 'dark' ? 'var(--acbg)' : 'transparent',
+      darkFg: s.theme === 'dark' ? 'var(--ac)' : 'var(--tx3)',
+      lightBg: s.theme === 'light' ? 'var(--acbg)' : 'transparent',
+      lightFg: s.theme === 'light' ? 'var(--ac)' : 'var(--tx3)',
+      enterSends: s.enterSends,
+      toggleEnter: () => this.setState(st => ({ enterSends: !st.enterSends })),
+      enterTgBg: s.enterSends ? 'var(--ac)' : 'var(--bg3)',
+      enterKnob: s.enterSends ? '17.5px' : '2.5px',
+      metaShow: s.metaShow,
+      toggleMetaShow: () => this.setState(st => ({ metaShow: !st.metaShow })),
+      metaTgBg: s.metaShow ? 'var(--ac)' : 'var(--bg3)',
+      metaKnob: s.metaShow ? '17.5px' : '2.5px',
+      thinkOpen: s.thinkOpen,
+      toggleThink: () => this.setState(st => ({ thinkOpen: !st.thinkOpen })),
+      thinkChev: s.thinkOpen ? 'rotate(180deg)' : 'none',
+      metaOn,
+      copyLabel: s.copied ? 'Copiado' : 'Copiar',
+      copyCode: () => {
+        navigator.clipboard && navigator.clipboard.writeText('import hashlib, time\nfrom pathlib import Path\n\ndef hash_tree(root: Path) -> dict:\n    return {p: hashlib.sha256(p.read_bytes()).hexdigest()\n            for p in root.rglob("*") if p.is_file()}\n\nbaseline = hash_tree(Path("C:/Sites/Lab_Experiments"))');
+        this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 1600);
+      },
+      copyDemo: () => { navigator.clipboard && navigator.clipboard.writeText('Estado de los labs y recomendación: empezar por Infil_Mechanics.'); },
+      retry: () => { this.setState(st => ({ cleared: { ...st.cleared, scrap: true } })); this.sendText('Retomá el scraper y agregale rate limiting.'); },
+      suggestions: [
+        { t: 'Resumí las notas nuevas del vault de esta semana', go: () => this.sendText('Resumí las notas nuevas del vault de esta semana') },
+        { t: 'Generá una landing HTML para el lab de seguridad', go: () => this.sendText('Generá una landing HTML para el lab de seguridad') },
+        { t: 'Buscá en la web novedades de Ollama 0.9', go: () => this.sendText('Buscá en la web novedades de Ollama 0.9') },
+        { t: 'Explicame los hooks de pynput con ejemplos', go: () => this.sendText('Explicame los hooks de pynput con ejemplos') },
+      ],
+      draft: s.draft,
+      hasDraft: draftOk,
+      draftCount: s.draft.length + ' car.',
+      onDraft: e => {
+        this.setState({ draft: e.target.value });
+        const el = e.target; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+      },
+      onKey: e => {
+        if (e.key === 'Enter' && !e.shiftKey && s.enterSends) { e.preventDefault(); if (draftOk && !s.sending) this.sendText(s.draft.trim()); }
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !s.enterSends) { e.preventDefault(); if (draftOk && !s.sending) this.sendText(s.draft.trim()); }
+      },
+      onTaFocus: () => this.setState({ taFocus: true }),
+      onTaBlur: () => this.setState({ taFocus: false }),
+      composerBd: s.taFocus ? 'var(--ac)' : 'var(--bd)',
+      send: () => { if (draftOk && !s.sending) this.sendText(s.draft.trim()); },
+      stop: () => {
+        clearInterval(this._timer);
+        this.patchLast(s.activeId, { streaming: false, meta: 'generación detenida' });
+        this.setState({ sending: false });
+      },
+      sending: s.sending, notSending: !s.sending,
+      sendDisabled: !draftOk,
+      sendBg: draftOk ? 'var(--ac)' : 'var(--bg3)',
+      sendHoverBg: draftOk ? 'var(--ac2)' : 'var(--bg3)',
+      sendFg: draftOk ? '#fff' : 'var(--tx3)',
+      sendCursor: draftOk ? 'pointer' : 'default',
+      statusDot: modelDown ? 'var(--err)' : !s.vaultPath.trim() ? 'var(--cn)' : 'var(--ok)',
+      statusText: (modelDown ? 'Modelo no disponible' : model.short + ' cargado')
+        + ' · ' + (!s.vaultPath.trim() ? 'Sin corpus' : s.ragOn ? 'Corpus OK' : 'RAG off')
+        + ' · ' + toolsOn + ' tools',
+    };
+  }
+  _commitRename() {
+    this.setState(st => ({
+      spaces: st.spaces.map(x => x.id === st.renamingId ? { ...x, name: st.renameVal.trim() || x.name } : x),
+      renamingId: null,
+    }));
+  }
+}
+</script>
+</body>
+</html>

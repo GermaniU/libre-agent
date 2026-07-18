@@ -1,0 +1,20 @@
+# secretos — NUNCA commitear
+.env
+*.key
+*.pem
+
+# entorno / caché
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# datos locales (conversaciones, memoria, trazas, páginas generadas)
+cowork.db
+*.db
+trace.jsonl
+*.jsonl
+static/*.html
+
+# sistema
+.DS_Store
