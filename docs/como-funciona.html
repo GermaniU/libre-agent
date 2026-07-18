@@ -310,12 +310,12 @@ PORT=9000 ./run-spa.sh  # otro puerto</pre></div>
 
 <script>
 function tog(id){document.getElementById(id).classList.toggle('open')}
-const pb=document.getElementById('pb'),top=document.getElementById('top');
+const pb=document.getElementById('pb'),topBtn=document.getElementById('top');
 const secs=[...document.querySelectorAll('section.s')],nav=[...document.querySelectorAll('.nt')];
 addEventListener('scroll',()=>{
   const h=document.documentElement,sc=h.scrollTop,mx=h.scrollHeight-h.clientHeight;
   pb.style.width=(mx>0?sc/mx*100:0)+'%';
-  top.classList.toggle('vis',sc>400);
+  topBtn.classList.toggle('vis',sc>400);
   let cur=secs[0]?.id;
   for(const s of secs){if(s.getBoundingClientRect().top<120)cur=s.id}
   nav.forEach(n=>n.classList.toggle('active',n.getAttribute('href')==='#'+cur));
