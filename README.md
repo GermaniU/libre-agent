@@ -35,6 +35,15 @@ tools (web, vault/RAG, filesystem, HTML) y presencia en web + Telegram.
 
 ---
 
+## 📖 Cómo funciona
+
+Documentación técnica interactiva (arquitectura, ciclo de un turno, MCP, memoria,
+seguridad y buenas prácticas): **[`docs/como-funciona.html`](docs/como-funciona.html)**.
+
+> Es una página HTML autocontenida — **descargala y abrila en tu navegador**. GitHub
+> muestra el código fuente, no la renderiza. (Cuando el repo sea público, se puede ver
+> con [htmlpreview](https://htmlpreview.github.io/?https://github.com/GermaniU/libre-agent/blob/main/docs/como-funciona.html).)
+
 ## 💡 Por qué existe
 
 No busca competirle en features a los clientes grandes de Ollama. Su gracia es otra: es
