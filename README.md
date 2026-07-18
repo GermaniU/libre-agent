@@ -254,6 +254,14 @@ grande, abrí un issue primero y lo charlamos.
 
 ---
 
+## ☕ Apoyar
+
+Es gratis y libre. Si te sirve y podés, invitame un café:
+
+[![PayPal](https://img.shields.io/badge/☕_Invitame_un_café-PayPal-0070ba?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/GermaniUicab)
+
+→ **[paypal.me/GermaniUicab](https://paypal.me/GermaniUicab)**
+
 ## 📄 Licencia
 
 [MIT](LICENSE) — libre para usar, modificar y compartir.
