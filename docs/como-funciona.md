@@ -44,19 +44,19 @@ la capa de memoria para el contexto persistente.
 └──────┬───────┘   └──────┬────────┘
        └─────────┬────────┘
                  ▼
-         ┌────────────────┐   agent.py = build_system + finalize
-         │  núcleo agente │   (un turno se resuelve igual en todos)
+         ┌────────────────┐   agent.run_turn (un turno se resuelve igual en todos)
+         │  núcleo agente │
          └───────┬────────┘
     ┌────────────┼───────────────┬───────────────┐
     ▼            ▼               ▼               ▼
-┌────────┐  ┌─────────┐   ┌────────────┐  ┌──────────┐
-│ ollama │  │  tools  │   │ mcp_bridge │  │  vault   │
-│ (chat) │  │ locales │   │ (mcp.json) │  │  (RAG)   │
-└────────┘  └─────────┘   └─────┬──────┘  └──────────┘
-                                ▼
-                       ┌──────────────────┐
-                       │   mcp-memory     │  memoria semántica
-                       │  (otra máquina)  │  Ollama emb + Qdrant
+┌──────────┐┌─────────┐   ┌────────────┐  ┌──────────┐
+│ modelos  ││  tools  │   │ mcp_bridge │  │  vault   │
+│          ││ locales │   │ (mcp.json) │  │  (RAG)   │
+│ ollama   │└─────────┘   └─────┬──────┘  └──────────┘
+│ llama.cpp│                    ▼
+│ (:8080,  │           ┌──────────────────┐
+│  OpenAI) │           │   mcp-memory     │  memoria semántica
+└──────────┘           │  (otra máquina)  │  Ollama emb + Qdrant
                        └──────────────────┘
 ```
 
@@ -95,7 +95,7 @@ y emite eventos en vivo. Recorrido real (`api.py` + `clients.chat_stream_with_to
 | Módulo | Líneas | Responsabilidad |
 |---|---|---|
 | `agent.py` | 43 | Núcleo compartido: `build_system` (prompt + recall) y `finalize` (save + trace). |
-| `clients.py` | 291 | Cliente ollama: chat, streaming con tools, ventana de contexto + corpus/RAG del vault. |
+| `clients.py` | ~560 | Inferencia: ollama + backend OpenAI (llama.cpp, con tools) + corpus/RAG del vault. |
 | `tools.py` | 376 | Tools locales: web, vault, filesystem, shell (con guardas), HTML, skills. |
 | `api.py` | 417 | Backend FastAPI: sirve la SPA y expone el agente por HTTP (streaming NDJSON). |
 | `app.py` | 345 | UI clásica en Streamlit (alternativa a la SPA). |

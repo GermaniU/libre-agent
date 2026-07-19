@@ -177,29 +177,30 @@ Cada capacidad se prende/apaga por chat desde el compositor.
 ## 🧱 Arquitectura
 
 ```
-┌─────────────┐   ┌──────────────┐
-│  UI web SPA │   │  bot Telegram │        gateways (mismo núcleo)
-│   :8585     │   │              │
-└──────┬──────┘   └──────┬───────┘
+┌─────────────┐   ┌───────────────┐
+│  UI web SPA │   │  bot Telegram │       gateways (mismo núcleo)
+│   :8585     │   │               │
+└──────┬──────┘   └──────┬────────┘
        └────────┬────────┘
                 ▼
-        ┌───────────────┐   agent.py = build_system + finalize
-        │  núcleo agente │   (un turno se resuelve igual en todos)
-        └───────┬───────┘
-     ┌──────────┼──────────────┬──────────────┐
-     ▼          ▼              ▼              ▼
- ┌────────┐ ┌────────┐  ┌────────────┐  ┌──────────┐
- │ ollama │ │ tools  │  │ mcp_bridge │  │  vault   │
- │ (chat) │ │ locales│  │  (mcp.json)│  │  (RAG)   │
- └────────┘ └────────┘  └─────┬──────┘  └──────────┘
-                              ▼
-                     ┌──────────────────┐
-                     │  mcp-memory      │  memoria semántica
-                     │  (otra máquina)  │  Ollama emb + Qdrant
-                     └──────────────────┘
+        ┌────────────────┐   agent.run_turn (un turno se resuelve igual en todos)
+        │  núcleo agente │
+        └───────┬────────┘
+     ┌──────────┼───────────────┬──────────────┐
+     ▼          ▼               ▼              ▼
+┌──────────┐ ┌────────┐  ┌────────────┐  ┌──────────┐
+│ modelos  │ │ tools  │  │ mcp_bridge │  │  vault   │
+│          │ │ locales│  │ (mcp.json) │  │  (RAG)   │
+│ ollama   │ └────────┘  └─────┬──────┘  └──────────┘
+│ llama.cpp│                   ▼
+│ (:8080,  │          ┌──────────────────┐
+│  OpenAI) │          │  mcp-memory      │  memoria semántica
+└──────────┘          │  (otra máquina)  │  Ollama emb + Qdrant
+                      └──────────────────┘
 ```
 
-La lógica de un turno vive en `agent.py`, así **UI y bot no divergen**.
+La lógica de un turno vive en `agent.run_turn`, así **UI y bot no divergen**. El chat
+puede ir a **ollama** o al backend **llama.cpp** (OpenAI-compatible), transparente al núcleo.
 
 ---
 
