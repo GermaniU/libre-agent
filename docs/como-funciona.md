@@ -7,7 +7,7 @@ memoria y las decisiones de diseño detrás del código.
 > `mcp_bridge` ponen las manos, y SQLite + mcp-memory ponen la memoria.
 
 > 💡 Esta es la versión markdown (legible directo en GitHub). Hay una versión
-> **interactiva** en [`como-funciona.html`](como-funciona.html) — descargala y abrila
+> **interactiva** en [`como-funciona.html`](como-funciona.html) — descárgala y ábrela
 > en el navegador.
 
 ---
@@ -26,7 +26,7 @@ mismo núcleo.
 - **Un núcleo, muchos gateways.** La lógica de un turno vive en un solo lugar (`agent.py`),
   así la UI y el bot nunca divergen.
 - **Estándar sobre custom.** Las capacidades externas (memoria, tools de terceros) entran
-  por **MCP**, el mismo protocolo que usan Claude Code o Cursor: lo que conectás acá sirve
+  por **MCP**, el mismo protocolo que usan Claude Code o Cursor: lo que conectas aquí sirve
   en todos.
 
 ---
@@ -68,7 +68,7 @@ la capa de memoria para el contexto persistente.
 
 ## 3. El ciclo de un turno
 
-Cuando enviás un mensaje en la SPA, el backend abre un **stream NDJSON** (`POST /api/chat`)
+Cuando envías un mensaje en la SPA, el backend abre un **stream NDJSON** (`POST /api/chat`)
 y emite eventos en vivo. Recorrido real (`api.py` + `clients.chat_stream_with_tools`):
 
 1. **Cargar sesión.** `store.load_sessions()` trae el historial; se agrega tu mensaje.
@@ -179,7 +179,7 @@ embeddings + Qdrant). Tiene dos caminos:
 
 > **Ojo con el modelo** — El camino explícito depende de que el modelo *elija* llamar la
 > tool. Modelos chicos a veces no la disparan con prompts vagos; para recall confiable,
-> dejá prendida la píldora "Memoria" (auto-recall) o sé explícito ("buscá en tu memoria X").
+> deja prendida la píldora "Memoria" (auto-recall) o sé explícito ("busca en tu memoria X").
 
 ---
 
@@ -213,7 +213,7 @@ eventos se enganchan una sola vez con delegación (`data-action`).
 | Secretos | Token de Telegram y `env` de MCP en `.env` / `mcp.json`, ambos git-ignored. |
 
 > **No es un sandbox** — `run_cmd` ejecuta comandos de dev que el modelo decide. Las guardas
-> reducen el daño accidental, pero mantené criterio sobre lo que corre, sobre todo con
+> reducen el daño accidental, pero mantén criterio sobre lo que corre, sobre todo con
 > entradas de terceros (prompt injection vía contenido web/vault).
 
 ---
@@ -265,7 +265,7 @@ PORT=9000 ./run-spa.sh  # otro puerto
 ```
 
 Con solo tener **ollama** y un modelo de chat ya funciona. Memoria (MCP), vault/RAG y
-Telegram son opcionales y degradan solos si no los configurás.
+Telegram son opcionales y degradan solos si no los configuras.
 
 ---
 
@@ -273,7 +273,7 @@ Telegram son opcionales y degradan solos si no los configurás.
 
 Las secciones anteriores explican *qué hace* cada parte. Estas explican los **conceptos por
 dentro** — el cómo y el porqué de un asistente local. Algunos valores numéricos (VRAM,
-tokens) son ejemplos ilustrativos; ajustá a tu modelo y hardware.
+tokens) son ejemplos ilustrativos; ajusta a tu modelo y hardware.
 
 ## F1. Ollama, GGUF y cuantización
 
@@ -399,7 +399,7 @@ asistente lee antes de conversar.
 
 ```
 FIN DE CONVERSACIÓN:
-  Chat → prompt "extraé datos memorables" → hechos → guardar
+  Chat → prompt "extrae datos memorables" → hechos → guardar
 
 INICIO DE CONVERSACIÓN:
   Memoria → filtrar relevantes → inyectar en el system prompt
@@ -412,9 +412,9 @@ Estructura de un recuerdo y **prompt de extracción**:
 ```
 
 ```
-Analizá la conversación y extraé hechos memorables sobre el usuario. Solo lo que sirva a
-futuro. Reglas: no repitas lo ya conocido; categorizá (negocio, tecnología, interés,
-personal, proyecto); sé específico; ignorá saludos y datos temporales.
+Analiza la conversación y extrae hechos memorables sobre el usuario. Solo lo que sirva a
+futuro. Reglas: no repitas lo ya conocido; categoriza (negocio, tecnología, interés,
+personal, proyecto); sé específico; ignora saludos y datos temporales.
 Salida JSON: [{"category": "...", "content": "..."}]  ·  Si no hay nada nuevo: []
 ```
 
@@ -478,7 +478,7 @@ como lista de partes.
 ```
 
 **Prácticas:** una imagen de 1 MB en base64 puede consumir ~1.000-2.000 tokens →
-**redimensioná** antes de enviar (máx ~1.200px). LocalAgent lista los modelos de visión
+**redimensiona** antes de enviar (máx ~1.200px). LocalAgent lista los modelos de visión
 aparte (`qwen2.5vl`, `llava`, …) detectándolos por su `kind`.
 
 ---

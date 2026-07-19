@@ -59,7 +59,7 @@ Se editan en `~/llama.cpp-bin/run-llama.sh`:
 - `config.LLAMACPP_URL` (default `http://localhost:8080/v1`, vacío = deshabilitado).
 - Si el server está arriba, sus modelos **aparecen en el selector** de LocalAgent junto a los
   de ollama (etiquetados `llama.cpp`).
-- LocalAgent rutea el chat a `/v1/chat/completions` (streaming) cuando elegís ese modelo.
+- LocalAgent rutea el chat a `/v1/chat/completions` (streaming) cuando eliges ese modelo.
 - **ollama no se ve afectado**: sigue con sus tools, memoria, etc.
 - **Tools + MCP funcionan** (function-calling de OpenAI): las tools locales (web, vault, HTML,
   filesystem…) y las de MCP se ofrecen y ejecutan igual que en ollama. Verificado con el Qwen3.6.

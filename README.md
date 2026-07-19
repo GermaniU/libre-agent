@@ -20,7 +20,7 @@ tools (web, vault/RAG, filesystem, HTML) y presencia en web + Telegram.
 
 </div>
 
-> Software libre (MIT). El conocimiento se comparte: cloná, usá, modificá, compartí.
+> Software libre (MIT). El conocimiento se comparte: clona, usa, modifica, comparte.
 
 ---
 
@@ -42,16 +42,16 @@ prácticas.
 
 - 📄 **[Leer en GitHub (markdown)](docs/como-funciona.md)** — se lee directo, sin descargar nada.
 - 🖥️ **[Versión interactiva (HTML)](docs/como-funciona.html)** — misma info con acordeón y
-  nav; descargala y abrila en el navegador (GitHub no renderiza HTML, muestra el fuente).
+  nav; descárgala y ábrela en el navegador (GitHub no renderiza HTML, muestra el fuente).
 - 🦙 **[Backend llama.cpp](docs/llama-cpp.md)** — correr modelos con MTP / cuantizaciones
   exóticas (ej. Qwen3.6-35B-A3B) además de ollama.
 
-> Las dos primeras tienen el **mismo contenido**; elegí la que te resulte más cómoda.
+> Las dos primeras tienen el **mismo contenido**; elige la que te resulte más cómoda.
 
 ## 💡 Por qué existe
 
 No busca competirle en features a los clientes grandes de Ollama. Su gracia es otra: es
-**chico y legible** — un núcleo de agente en Python que podés leer, entender y forkear en
+**chico y legible** — un núcleo de agente en Python que puedes leer, entender y forkear en
 una tarde. Sin build step, sin cadena de JS, sin nube. El anti-"caja negra": un repo
 donde un PR se entiende sin arqueología.
 
@@ -59,16 +59,16 @@ Tres principios, los mismos que [mcp-memory](https://github.com/GermaniU/mcp-mem
 
 - **Todo en tu máquina** — el modelo, las conversaciones y la memoria; nada sale de tu LAN.
 - **Una conexión, muchas piezas** — se arma con servidores MCP estándar que también usan
-  otros clientes (Claude Code, Cursor, …). Lo que conectás acá sirve en todos.
+  otros clientes (Claude Code, Cursor, …). Lo que conectas aquí sirve en todos.
 - **Config sin sobrecarga** — con solo tener ollama ya arranca; lo demás es opcional y
-  degrada solo si no lo configurás.
+  degrada solo si no lo configuras.
 
 ---
 
 ## ⚡ Quickstart
 
 ```bash
-cp .env.example .env   # ajustá lo que uses (solo OLLAMA_URL es imprescindible)
+cp .env.example .env   # ajusta lo que uses (solo OLLAMA_URL es imprescindible)
 ./run-spa.sh           # UI web (SPA) en http://localhost:8585
 ```
 
@@ -93,7 +93,7 @@ semántica (Ollama embeddings + Qdrant) que corre en tu máquina o en otra de tu
 
 Así se combinan: mcp-memory expone las tools (`memory_save`, `memory_search`, `memory_recent`,
 …) y LocalAgent es uno de sus **clientes**. El modelo local decide cuándo guardar un hecho
-y cuándo recuperarlo, sin que vos toques nada.
+y cuándo recuperarlo, sin que tú toques nada.
 
 ```jsonc
 // mcp.json  (en la raíz del proyecto — mismo formato que Claude)
@@ -107,8 +107,8 @@ y cuándo recuperarlo, sin que vos toques nada.
 }
 ```
 
-Levantá mcp-memory (ver su [Quickstart](https://github.com/GermaniU/mcp-memory)), apuntá
-la URL en `mcp.json`, y en la UI **Config → MCPs** vas a ver el server: podés
+Levanta mcp-memory (ver su [Quickstart](https://github.com/GermaniU/mcp-memory)), apunta
+la URL en `mcp.json`, y en la UI **Config → MCPs** vas a ver el server: puedes
 activarlo/desactivarlo por chat, y **ver/editar su configuración** desde ahí mismo.
 
 ---
@@ -116,26 +116,51 @@ activarlo/desactivarlo por chat, y **ver/editar su configuración** desde ahí m
 ## 🔌 Conectar más servidores MCP
 
 LocalAgent usa un `mcp.json` **propio del proyecto** (no hereda el de Claude). Sin archivo
-= ningún MCP. Se puede editar a mano o todo desde la UI (**Config → MCPs**):
+= ningún MCP. Formato idéntico al `mcpServers` de Claude (override con `MCP_CONFIG`).
 
-- **Agregar**: nombre + destino. Una URL `http(s)://…` crea un server HTTP; cualquier otra
-  cosa se toma como comando stdio (`comando arg1 arg2`).
-- **Ver / editar**: cada server muestra su tipo y destino; el lápiz abre la config para
-  editarla (las variables de entorno con secretos se preservan y nunca se muestran).
-- **Activar por chat**: un toggle decide si sus tools se ofrecen al modelo.
+Hay **dos tipos** de servidor:
 
-Formato (idéntico al `mcpServers` de Claude), con override por `MCP_CONFIG`:
+- **HTTP** (`type: http` + `url`) — un server remoto/en la LAN. Ej.: mcp-memory en otra máquina.
+- **stdio** (`command` + `args` [+ `env`]) — un **proceso local** que LocalAgent arranca:
+  un script Python, Node, lo que sea. Es como corren los MCP propios (AgentPlatform, vault, …).
 
 ```jsonc
 {
   "mcpServers": {
-    "remoto":  { "type": "http", "url": "http://host:puerto/mcp" },
-    "local":   { "command": "python", "args": ["-m", "mi_server"], "env": { "API_KEY": "…" } }
+    // remoto por HTTP
+    "mcp-memory": { "type": "http", "url": "http://192.168.68.138:8765/mcp" },
+
+    // MCP local en Python (stdio): intérprete + ruta al script + variables de entorno
+    "vault-rw": {
+      "command": "/home/usuario/.venv/bin/python",
+      "args": ["/mnt/c/Sites/AgentPlatform/mcp/vault_rw/vault_rw.py"],
+      "env": { "VAULT_PATH": "/mnt/c/Sites/Data" }   // referencia al vault local
+    },
+
+    // MCP local en Node (stdio)
+    "taskflow": {
+      "command": "node",
+      "args": ["/home/usuario/taskflow-mcp/dist/index.js"],
+      "env": { "TASKFLOW_API_URL": "http://…", "TASKFLOW_API_KEY": "…" }
+    }
   }
 }
 ```
 
-Ver `mcp.json.example`. El `mcp.json` está git-ignored (puede llevar claves en `env`).
+> **Rutas**: en stdio los `command`/`args` son **paths de ESTA máquina**. Si migras una
+> config de otra máquina (ej. de una Mac), ajusta las rutas (en WSL, `/mnt/c/Sites/…`) y el
+> intérprete. Un MCP HTTP anda desde cualquier lado si el host es alcanzable.
+
+Se edita a mano o **todo desde la UI** (**Config → MCPs**):
+
+- **Agregar rápido**: nombre + destino (URL http → server HTTP; un comando → stdio).
+- **Importar**: pegas un bloque `mcpServers` entero (uno o varios servers) y los mergea.
+- **Ver / editar**: cada server abre su **config JSON cruda** editable (tipo, args, `env`
+  con valores) — así se configura cualquier MCP, no solo los casos simples.
+- **Activar por chat**: un toggle decide si sus tools se ofrecen al modelo. Ojo: cada MCP
+  suma sus tools al prompt — activa pocos (ver [perf](docs/llama-cpp.md)).
+
+Ver `mcp.json.example`. El `mcp.json` está **git-ignored** (puede llevar claves en `env`).
 
 ---
 
@@ -227,9 +252,9 @@ puede ir a **ollama** o al backend **llama.cpp** (OpenAI-compatible), transparen
 
 ## 🎨 Personalizar
 
-- **Personalidad:** editá `soul.md` (es el system prompt; se recarga en caliente). También
+- **Personalidad:** edita `soul.md` (es el system prompt; se recarga en caliente). También
   desde la UI en **Config → Agente**.
-- **Skills:** agregá un `.md` con frontmatter (`name`, `description`) en `skills/`.
+- **Skills:** agrega un `.md` con frontmatter (`name`, `description`) en `skills/`.
 - **Parámetros:** temperatura, top-p, máx. tokens, contexto y system prompt desde el panel
   **Avanzado** de la UI.
 - **Tema:** claro/oscuro desde la UI; tokens de color en `web/style.css`.
@@ -240,7 +265,7 @@ puede ir a **ollama** o al backend **llama.cpp** (OpenAI-compatible), transparen
 
 `run_cmd` bloquea patrones destructivos y corre confinado a `WORKSPACE_DIR`, pero **no es
 un sandbox**: ejecuta comandos de dev que el modelo decide. Los secretos (token de Telegram,
-`env` de MCP servers, etc.) viven en `.env` / `mcp.json`, ambos git-ignored. Mantené criterio
+`env` de MCP servers, etc.) viven en `.env` / `mcp.json`, ambos git-ignored. Mantén criterio
 sobre lo que ejecuta, sobre todo con entradas de terceros. El backend restringe CORS a
 localhost y valida el path de los estáticos.
 
@@ -249,12 +274,12 @@ localhost y valida el path de los estáticos.
 ## 🩹 Troubleshooting
 
 - **La UI tarda en cargar** → algún servicio opcional (MCP remoto) no responde. Los MCP se
-  conectan al iniciar cada chat; desactivá el que esté caído en **Config → MCPs**.
+  conectan al iniciar cada chat; desactiva el que esté caído en **Config → MCPs**.
 - **El modelo escupe el tool call como texto en vez de ejecutarlo** → ese modelo no maneja
-  bien tools. Probá con `gemma4:12b` u otro que soporte function-calling.
-- **La memoria no guarda nada** → verificá que mcp-memory esté arriba y la URL de `mcp.json`
+  bien tools. Prueba con `gemma4:12b` u otro que soporte function-calling.
+- **La memoria no guarda nada** → verifica que mcp-memory esté arriba y la URL de `mcp.json`
   sea alcanzable (`curl http://host:8765/mcp`), y que el server esté activo en la UI.
-- **Respuestas cortadas** → subí "Máx. tokens" en el panel Avanzado.
+- **Respuestas cortadas** → sube "Máx. tokens" en el panel Avanzado.
 
 ---
 
@@ -270,14 +295,14 @@ localhost y valida el path de los estáticos.
 ## 🤝 Contribuir
 
 Los PRs son bienvenidos. La idea es que el código siga siendo **legible**: cambios chicos y
-enfocados, sin dependencias de más, en el mismo estilo del módulo que tocás. Para algo
-grande, abrí un issue primero y lo charlamos.
+enfocados, sin dependencias de más, en el mismo estilo del módulo que tocas. Para algo
+grande, abre un issue primero y lo charlamos.
 
 ---
 
 ## ☕ Apoyar
 
-Es gratis y libre. Si te sirve y podés, invitame un café:
+Es gratis y libre. Si te sirve y puedes, invitame un café:
 
 [![PayPal](https://img.shields.io/badge/☕_Invitame_un_café-PayPal-0070ba?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/GermaniUicab)
 
@@ -287,4 +312,4 @@ Es gratis y libre. Si te sirve y podés, invitame un café:
 
 [MIT](LICENSE) — libre para usar, modificar y compartir.
 
-Hecho por [@GermaniU](https://github.com/GermaniU). Si te sirve, dale una ⭐ y reportá issues.
+Hecho por [@GermaniU](https://github.com/GermaniU). Si te sirve, dale una ⭐ y reporta issues.

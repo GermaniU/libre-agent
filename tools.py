@@ -41,7 +41,7 @@ def web_search(query, max_results=5):
             last_err = e
             time.sleep(1.5 * (attempt + 1))
     return (f"web_search no disponible ahora (DuckDuckGo rate-limita el scraping): {last_err}. "
-            "Respondé con tu conocimiento o probá de nuevo en un momento.")
+            "Responde con tu conocimiento o prueba de nuevo en un momento.")
 
 
 def web_fetch(url, max_chars=5000):
@@ -147,7 +147,7 @@ def write_html(filename, content, title=""):
     # The SPA (api.py) serves static/ at the root path; PORT is the SPA port (default 8585).
     port = os.getenv("PORT", "8585")
     return (f"Página guardada en static/{name}.html. "
-            f"Abrila en http://localhost:{port}/{name}.html "
+            f"Ábrela en http://localhost:{port}/{name}.html "
             f"(desde otra máquina de la LAN: http://{ip}:{port}/{name}.html)")
 
 
@@ -166,7 +166,7 @@ def use_skill(name):
     if not body:
         avail = ", ".join(n for n, _ in skills.list_skills()) or "(ninguna)"
         return f"No existe la skill '{name}'. Disponibles: {avail}"
-    return f"PROCEDIMIENTO de la skill '{name}' — seguilo paso a paso con las tools:\n\n{body}"
+    return f"PROCEDIMIENTO de la skill '{name}' — síguelo paso a paso con las tools:\n\n{body}"
 
 
 # ---------------------------------------------------------------- filesystem (workspace)
@@ -246,7 +246,7 @@ def run_cmd(command, timeout=60):
         return "Error: comando vacío."
     if _BLOCKED_CMD.search(cmd):
         return ("BLOQUEADO: el comando coincide con un patrón destructivo y no se ejecuta. "
-                "Si es legítimo, reformulalo o corrélo vos a mano.")
+                "Si es legítimo, reformúlalo o córrelo tú a mano.")
     try:
         r = subprocess.run(cmd, shell=True, cwd=config.WORKSPACE_DIR,
                            capture_output=True, text=True, timeout=int(timeout))

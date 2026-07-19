@@ -14,7 +14,7 @@
     }
   },
   "vault_pull": {
-    "description": "Actualiza el vault físico con git pull. Usala antes de vault_recent si el usuario pregunta por trabajo muy reciente.",
+    "description": "Actualiza el vault físico con git pull. Úsala antes de vault_recent si el usuario pregunta por trabajo muy reciente.",
     "params": {}
   },
   "vault_recent": {
@@ -30,7 +30,7 @@
     }
   },
   "write_html": {
-    "description": "Guarda una página HTML y devuelve la URL para abrirla en el navegador. Úsala cuando el usuario pida un documento, reporte, tabla o página visual. Pasá el HTML completo del body (CSS inline permitido).",
+    "description": "Guarda una página HTML y devuelve la URL para abrirla en el navegador. Úsala cuando el usuario pida un documento, reporte, tabla o página visual. Pasa el HTML completo del body (CSS inline permitido).",
     "params": {
       "filename": "Nombre del archivo, ej: reporte-ventas",
       "content": "El HTML completo de la página",
@@ -64,7 +64,7 @@
     }
   },
   "run_cmd": {
-    "description": "Ejecuta un comando de shell en el workspace (C:\\Sites) y devuelve su salida (exit code + stdout/stderr). Úsalo para tareas de dev: instalar deps (pip install), correr un script (python x.py), git, ls, etc. Bloquea comandos destructivos. Preferí comandos no interactivos y de una sola línea.",
+    "description": "Ejecuta un comando de shell en el workspace (C:\\Sites) y devuelve su salida (exit code + stdout/stderr). Úsalo para tareas de dev: instalar deps (pip install), correr un script (python x.py), git, ls, etc. Bloquea comandos destructivos. Prefiere comandos no interactivos y de una sola línea.",
     "params": {
       "command": "El comando de shell a ejecutar",
       "timeout": "Segundos máx antes de cortar (default 60)"

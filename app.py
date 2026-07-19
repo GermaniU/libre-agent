@@ -182,11 +182,11 @@ with st.sidebar:
 
     use_tools = st.toggle(
         "🛠️ Usar tools (web · vault · HTML)", value=True,
-        help="Apagalo para CHAT PURO: el modelo responde solo con su conocimiento, "
+        help="Apágalo para CHAT PURO: el modelo responde solo con su conocimiento, "
              "sin buscar en la web ni en el vault. Ideal para modelos sin tool-calling.")
     think = st.toggle(
         "🧠 Razonamiento (thinking)", value=False,
-        help="Activá el pensamiento paso a paso: mejor en preguntas complejas, pero más "
+        help="Activa el pensamiento paso a paso: mejor en preguntas complejas, pero más "
              "lento. Apagado = respuestas ágiles. Se ignora solo si el modelo no razona.")
     use_memory = st.toggle(
         "💾 Memoria persistente", value=True,
@@ -200,7 +200,7 @@ with st.sidebar:
         mcp_sel = st.multiselect("🔌 MCPs de Claude", mcp_bridge.list_configured_servers(),
                                   default=[],
                                   help="Suma los MCP servers de ~/.claude.json. "
-                                       "Elegí pocos: cada uno mete tools al contexto del modelo.")
+                                       "Elige pocos: cada uno mete tools al contexto del modelo.")
         if mcp_sel:
             with st.spinner("Conectando MCPs…"):
                 bridge = _bridge(tuple(sorted(mcp_sel)))
@@ -251,7 +251,7 @@ def _draw_ctx():
             st.progress(pct, text=f"🧮 Contexto: {used:,} / {limit:,} tokens ({pct:.0%}) · "
                                    f"consumidos en la sesión: {total:,}")
             if pct >= 0.85:
-                st.warning("El contexto está casi lleno — abrí un espacio nuevo o limpiá este.")
+                st.warning("El contexto está casi lleno — abre un espacio nuevo o limpia este.")
         else:
             st.caption(f"🧮 Tokens consumidos en la sesión: {total:,}")
 
@@ -275,7 +275,7 @@ for i, msg in enumerate(sess["messages"]):
         if mt:
             st.caption(f"⏱️ {mt['secs']}s · {mt['gen']} tokens · {mt['tps']} tok/s")
 
-prompt = st.chat_input("Preguntá lo que sea — el modelo decide si usa web, vault o tools…")
+prompt = st.chat_input("Pregunta lo que sea — el modelo decide si usa web, vault o tools…")
 if prompt:
     sess["messages"].append({"role": "user", "content": prompt})
     with st.chat_message("user"):

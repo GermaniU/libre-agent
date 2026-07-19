@@ -1,3 +1,3 @@
-Resumí la siguiente conversación conservando decisiones, datos concretos, preferencias del usuario y el contexto necesario para continuar. Sé conciso pero no pierdas info importante. No inventes.
+Resume la siguiente conversación conservando decisiones, datos concretos, preferencias del usuario y el contexto necesario para continuar. Sé conciso pero no pierdas info importante. No inventes.
 
 {conversation}

@@ -451,10 +451,10 @@ function renderChat(act) {
   const msgs = act.messages || [];
   const empty = msgs.length === 0 && !state.sending;
   const suggestions = [
-    'Resumí las notas nuevas del vault de esta semana',
-    'Generá una landing HTML para el proyecto',
-    'Buscá en la web novedades de Ollama',
-    'Explicame los hooks de pynput con ejemplos',
+    'Resume las notas nuevas del vault de esta semana',
+    'Genera una landing HTML para el proyecto',
+    'Busca en la web novedades de Ollama',
+    'Explícame los hooks de pynput con ejemplos',
   ];
   return `
   <div data-screen-label="Conversación" style="flex:1;overflow-y:auto;min-height:0" id="chat-scroll">
@@ -612,7 +612,7 @@ function renderComposer() {
   <div data-screen-label="Compositor" style="flex:none;padding:8px 24px 10px;background:var(--bg0)">
     <div style="max-width:var(--cw);margin:0 auto">
       <div id="composer-box" style="background:var(--bg2);border:1px solid ${state.taFocus ? 'var(--ac)' : 'var(--bd)'};border-radius:16px;padding:12px 12px 10px;transition:border-color .15s;box-shadow:0 2px 12px rgba(0,0,0,.12)">
-        <textarea data-input="draft" rows="1" placeholder="Preguntá lo que sea — el modelo decide si usa web, vault o tools…" aria-label="Mensaje" style="display:block;width:100%;border:none;background:transparent;color:var(--tx);font-family:inherit;font-size:14.5px;line-height:1.5;resize:none;min-height:24px;max-height:200px;padding:2px 4px 8px">${esc(state.draft)}</textarea>
+        <textarea data-input="draft" rows="1" placeholder="Pregunta lo que sea — el modelo decide si usa web, vault o tools…" aria-label="Mensaje" style="display:block;width:100%;border:none;background:transparent;color:var(--tx);font-family:inherit;font-size:14.5px;line-height:1.5;resize:none;min-height:24px;max-height:200px;padding:2px 4px 8px">${esc(state.draft)}</textarea>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           ${capDefs.map(c => {
             const on = state.caps[c.k];
@@ -673,12 +673,12 @@ function renderAdvanced() {
           <span style="display:flex;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:8px">Temperatura<span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--tx)">${state.temp}</span></span>
           <input data-input="temp" type="range" min="0" max="2" step="0.1" value="${state.temp}" style="width:100%;accent-color:var(--ac)">
         </label>
-        <label style="display:block" title="Núcleo de probabilidad: el modelo elige solo entre las palabras más probables que juntas suman este porcentaje. Más bajo = más conservador y repetitivo. Dejalo en 0.9 salvo que sepas por qué cambiarlo.">
+        <label style="display:block" title="Núcleo de probabilidad: el modelo elige solo entre las palabras más probables que juntas suman este porcentaje. Más bajo = más conservador y repetitivo. Déjalo en 0.9 salvo que sepas por qué cambiarlo.">
           <span style="display:flex;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:8px">Top-p<span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--tx)">${state.topP}</span></span>
           <input data-input="topp" type="range" min="0" max="1" step="0.05" value="${state.topP}" style="width:100%;accent-color:var(--ac)">
         </label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <label style="display:block" title="Largo máximo de la respuesta, en tokens. Si te corta respuestas largas, subilo (~4 caracteres ≈ 1 token).">
+          <label style="display:block" title="Largo máximo de la respuesta, en tokens. Si te corta respuestas largas, súbelo (~4 caracteres ≈ 1 token).">
             <span style="display:block;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">Máx. tokens</span>
             <input data-input="maxtok" type="number" value="${state.maxTok}" style="width:100%;height:36px;border:1px solid var(--bd);border-radius:9px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:0 10px">
           </label>
@@ -840,7 +840,7 @@ function renderCfgMcp() {
     </div>
     <div style="border:1px dashed var(--bd2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
       <div style="font-size:12px;font-weight:600;color:var(--tx2)">Importar</div>
-      <div style="font-size:11.5px;color:var(--tx3);line-height:1.5">Pegá uno o varios servers (formato <code style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--bg3);border-radius:5px;padding:1px 5px">mcpServers</code> de Claude). Se agregan o reemplazan por nombre.</div>
+      <div style="font-size:11.5px;color:var(--tx3);line-height:1.5">Pega uno o varios servers (formato <code style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--bg3);border-radius:5px;padding:1px 5px">mcpServers</code> de Claude). Se agregan o reemplazan por nombre.</div>
       <textarea data-input="mcpImport" rows="6" spellcheck="false" placeholder='{"mcpServers": {"mi-server": {"command": "npx", "args": ["-y", "algo"]}}}' style="width:100%;border:1px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:8px 10px;resize:vertical">${esc(state.mcpImportText)}</textarea>
       ${state.mcpError && !state.mcpEditing ? `<div style="font-size:12px;color:var(--err)">${esc(state.mcpError)}</div>` : ''}
       <button data-action="importMcps" style="height:32px;border:none;border-radius:8px;background:var(--ac);color:#fff;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer">Importar</button>
@@ -1111,7 +1111,7 @@ async function compactChat() {
     flashNotice('Nada para compactar todavía (conversación corta)');
     return;
   }
-  if (!state.modelId) { alert('Seleccioná un modelo primero.'); return; }
+  if (!state.modelId) { alert('Selecciona un modelo primero.'); return; }
 
   state.compacting = true;
   render();
@@ -1345,7 +1345,7 @@ async function sendMessage() {
   // block while compacting: both would write the same session (race)
   if (!text || state.sending || state.compacting) return;
   if (!state.activeId) await newChat();
-  if (!state.modelId) { alert('Seleccioná un modelo primero.'); return; }
+  if (!state.modelId) { alert('Selecciona un modelo primero.'); return; }
 
   state.draft = '';
   state.sending = true;

@@ -176,7 +176,7 @@ def cmd_model(arg):
         partial = [n for n in names if arg.lower() in n.lower()]
         pick = (exact or partial or [None])[0]
     if not pick:
-        return f"No encontré `{arg}`. Mirá la lista con /model"
+        return f"No encontré `{arg}`. Mira la lista con /model"
     state["model"] = pick
     return f"✅ Modelo cambiado a `{pick}`"
 
@@ -191,10 +191,10 @@ def cmd_mcp(arg):
     avail = mcp_bridge.list_configured_servers()
     if not arg:
         lines = [f"{'🟢' if s in state['mcps'] else '⚪'} `{s}`" for s in avail]
-        return ("MCPs (tocá para alternar con `/mcp <nombre>`):\n" + "\n".join(lines)
-                + "\n\nOjo: cada MCP suma tools al contexto — conectá pocos.")
+        return ("MCPs (toca para alternar con `/mcp <nombre>`):\n" + "\n".join(lines)
+                + "\n\nOjo: cada MCP suma tools al contexto — conecta pocos.")
     if arg not in avail:
-        return f"No existe `{arg}`. Mirá /mcp"
+        return f"No existe `{arg}`. Mira /mcp"
     if arg in state["mcps"]:
         state["mcps"].discard(arg)
         action = f"🔌 Desconectado `{arg}`"

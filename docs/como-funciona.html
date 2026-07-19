@@ -120,7 +120,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <ul>
       <li><strong>Legible sobre completo.</strong> ~3.600 líneas que se entienden en una tarde; sin build step, sin cadena de JS, sin framework de frontend.</li>
       <li><strong>Un núcleo, muchos gateways.</strong> La lógica de un turno vive en un solo lugar (<code>agent.py</code>), así la UI y el bot nunca divergen.</li>
-      <li><strong>Estándar sobre custom.</strong> Las capacidades externas (memoria, tools de terceros) entran por <strong>MCP</strong>, el mismo protocolo que usan Claude Code o Cursor: lo que conectás acá sirve en todos.</li>
+      <li><strong>Estándar sobre custom.</strong> Las capacidades externas (memoria, tools de terceros) entran por <strong>MCP</strong>, el mismo protocolo que usan Claude Code o Cursor: lo que conectas aquí sirve en todos.</li>
     </ul>
     <div class="box info"><div class="bt">TL;DR</div><p>ollama pone el cerebro, <code>agent.py</code> orquesta el turno, las <code>tools</code> y el <code>mcp_bridge</code> ponen las manos, y SQLite + mcp-memory ponen la memoria.</p></div>
   </div></div>
@@ -159,7 +159,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <section class="s" id="s3">
   <div class="sh" onclick="tog('s3')"><div class="sn">03</div><div class="si">🔄</div><div class="sg"><div class="st">El ciclo de un turno</div><div class="ss">De tu mensaje a la respuesta, paso a paso</div></div><div class="sta">&#x25BC;</div></div>
   <div class="sb"><div class="bi">
-    <p>Cuando enviás un mensaje en la SPA, el backend abre un <strong>stream NDJSON</strong> (<code>POST /api/chat</code>) y emite eventos en vivo. Este es el recorrido real (<code>api.py</code> + <code>clients.chat_stream_with_tools</code>):</p>
+    <p>Cuando envías un mensaje en la SPA, el backend abre un <strong>stream NDJSON</strong> (<code>POST /api/chat</code>) y emite eventos en vivo. Este es el recorrido real (<code>api.py</code> + <code>clients.chat_stream_with_tools</code>):</p>
     <div class="flow">
       <div class="fs"><div><strong>Cargar sesión.</strong> <code>store.load_sessions()</code> trae el historial; se agrega tu mensaje.</div></div>
       <div class="fs"><div><strong>Armar el system prompt.</strong> <code>agent.build_system(soul, mensaje, use_memory)</code> combina <code>soul.md</code> con un <em>auto-recall</em> de memoria relevante. Emite evento <code>recall</code>.</div></div>
@@ -246,7 +246,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <li><strong>Automático</strong> (píldora "Memoria"): <code>build_system</code> hace <em>recall</em> de hechos relevantes en cada turno, y <code>finalize</code> hace <em>save</em> de lo nuevo. No depende de que el modelo lo pida.</li>
       <li><strong>Explícito</strong> (tools MCP): el modelo llama <code>agentic-memory-mcp__memory_search</code> / <code>__memory_save</code> cuando lo decide.</li>
     </ul>
-    <div class="box warn"><div class="bt">Ojo con el modelo</div><p>El camino explícito depende de que el modelo <em>elija</em> llamar la tool. Modelos chicos a veces no la disparan con prompts vagos; para recall confiable, dejá prendida la píldora "Memoria" (auto-recall) o sé explícito ("buscá en tu memoria X").</p></div>
+    <div class="box warn"><div class="bt">Ojo con el modelo</div><p>El camino explícito depende de que el modelo <em>elija</em> llamar la tool. Modelos chicos a veces no la disparan con prompts vagos; para recall confiable, deja prendida la píldora "Memoria" (auto-recall) o sé explícito ("busca en tu memoria X").</p></div>
   </div></div>
 </section>
 
@@ -275,7 +275,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <tr><td>XSS</td><td>Escapado estricto en el render; links solo con esquema http/mailto/relativo.</td></tr>
       <tr><td>Secretos</td><td>Token de Telegram y <code>env</code> de MCP en <code>.env</code> / <code>mcp.json</code>, ambos git-ignored.</td></tr>
     </tbody></table>
-    <div class="box warn"><div class="bt">No es un sandbox</div><p><code>run_cmd</code> ejecuta comandos de dev que el modelo decide. Las guardas reducen el daño accidental, pero mantené criterio sobre lo que corre, sobre todo con entradas de terceros (prompt injection vía contenido web/vault).</p></div>
+    <div class="box warn"><div class="bt">No es un sandbox</div><p><code>run_cmd</code> ejecuta comandos de dev que el modelo decide. Las guardas reducen el daño accidental, pero mantén criterio sobre lo que corre, sobre todo con entradas de terceros (prompt injection vía contenido web/vault).</p></div>
   </div></div>
 </section>
 
@@ -304,15 +304,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 ./run.sh                # UI clásica Streamlit → :8501
 ./run-bot.sh            # bot de Telegram (requiere TELEGRAM_BOT_TOKEN)
 PORT=9000 ./run-spa.sh  # otro puerto</pre></div>
-    <p>Con solo tener <strong>ollama</strong> y un modelo de chat ya funciona. Memoria (MCP), vault/RAG y Telegram son opcionales y degradan solos si no los configurás.</p>
+    <p>Con solo tener <strong>ollama</strong> y un modelo de chat ya funciona. Memoria (MCP), vault/RAG y Telegram son opcionales y degradan solos si no los configuras.</p>
   </div></div>
 </section>
 
-<div class="ph"><div class="pn">Fundamentos</div><h2>Cómo funciona por dentro</h2><p>Los conceptos detrás de un asistente local. Algunos valores (VRAM, tokens) son ejemplos ilustrativos — ajustá a tu modelo y hardware.</p></div>
+<div class="ph"><div class="pn">Fundamentos</div><h2>Cómo funciona por dentro</h2><p>Los conceptos detrás de un asistente local. Algunos valores (VRAM, tokens) son ejemplos ilustrativos — ajusta a tu modelo y hardware.</p></div>
 
 <!-- F1 -->
 <section class="s" id="f1">
-  <div class="sh" onclick="tog('f1')"><div class="sn">F1</div><div class="si">📦</div><div class="sg"><div class="st">Ollama, GGUF y cuantización</div><div class="ss">Modelo + runtime, y cuánta VRAM necesitás</div></div><div class="sta">&#x25BC;</div></div>
+  <div class="sh" onclick="tog('f1')"><div class="sn">F1</div><div class="si">📦</div><div class="sg"><div class="st">Ollama, GGUF y cuantización</div><div class="ss">Modelo + runtime, y cuánta VRAM necesitas</div></div><div class="sta">&#x25BC;</div></div>
   <div class="sb"><div class="bi">
     <p>Para correr un LLM localmente hacen falta dos cosas: un <strong>modelo</strong> y un <strong>runtime</strong>. <strong>Ollama</strong> es el runtime: un servidor local (puerto <code>11434</code>) con API REST. LocalAgent le habla por <code>POST /api/chat</code> con streaming (<code>clients.py</code>).</p>
     <p>Los modelos se comprimen con <strong>cuantización</strong> en formato <strong>GGUF</strong>: baja la precisión de los pesos para reducir tamaño y VRAM, a costa de algo de calidad. <code>Q2…Q8</code> = bits por peso; más alto, más calidad y más peso.</p>
@@ -384,12 +384,12 @@ for _ in range(MAX_ROUNDS):
   <div class="sh" onclick="tog('f4')"><div class="sn">F4</div><div class="si">💾</div><div class="sg"><div class="st">Memoria persistente</div><div class="ss">Extraer al final, inyectar al inicio</div></div><div class="sta">&#x25BC;</div></div>
   <div class="sb"><div class="bi">
     <p>Un LLM no recuerda entre conversaciones: cada chat empieza de cero. La memoria persistente guarda datos clave del usuario y los reinyecta — un "cuaderno de notas" que el asistente lee antes de conversar.</p>
-    <div class="cb"><div class="ch">arquitectura (dos momentos)</div><pre>FIN:    chat → prompt "extraé datos memorables" → hechos → guardar
+    <div class="cb"><div class="ch">arquitectura (dos momentos)</div><pre>FIN:    chat → prompt "extrae datos memorables" → hechos → guardar
 INICIO: memoria → filtrar relevantes → inyectar en el system prompt</pre></div>
     <div class="cb"><div class="ch">un recuerdo + prompt de extracción</div><pre>{"category": "proyecto", "content": "Publicó el repo libre-agent", "created": "2026-07-18"}
 
-"Extraé hechos memorables sobre el usuario. Solo lo útil a futuro. Categorizá
- (negocio, tecnología, interés, personal, proyecto). Ignorá saludos/datos temporales.
+"Extrae hechos memorables sobre el usuario. Solo lo útil a futuro. Categoriza
+ (negocio, tecnología, interés, personal, proyecto). Ignora saludos/datos temporales.
  Salida JSON: [{category, content}]  ·  Si no hay nada nuevo: []"</pre></div>
     <p><strong>Estrategias de recall:</strong> inyectar todo (simple, gasta tokens) · <strong>embedding-based</strong> (busca los hechos más relevantes a la pregunta — escalable) · por categorías.</p>
     <div class="box info"><div class="bt">En LocalAgent</div><p>Usa la estrategia embedding-based vía mcp-memory (búsqueda semántica en Qdrant). <code>memory.py</code> hace auto-recall en <code>build_system</code> y auto-save en <code>finalize</code>; el modelo también puede llamar las tools <code>memory_*</code>.</p></div>
@@ -435,7 +435,7 @@ MARGEN DE SEGURIDAD ~1000</pre></div>
     {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBORw0KGgo…"}}
   ]
 }</pre></div>
-    <div class="box warn"><div class="bt">Práctica</div><p>Una imagen de 1 MB en base64 puede consumir ~1.000-2.000 tokens → <strong>redimensioná</strong> antes de enviar (máx ~1.200px). LocalAgent lista los modelos de visión aparte (<code>qwen2.5vl</code>, <code>llava</code>) detectándolos por su <code>kind</code>.</p></div>
+    <div class="box warn"><div class="bt">Práctica</div><p>Una imagen de 1 MB en base64 puede consumir ~1.000-2.000 tokens → <strong>redimensiona</strong> antes de enviar (máx ~1.200px). LocalAgent lista los modelos de visión aparte (<code>qwen2.5vl</code>, <code>llava</code>) detectándolos por su <code>kind</code>.</p></div>
   </div></div>
 </section>
 

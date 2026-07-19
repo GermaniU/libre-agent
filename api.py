@@ -201,7 +201,7 @@ def add_mcp(req: McpAdd):
     name = req.name.strip()
     target = req.target.strip()
     if not re.match(r"^[a-zA-Z0-9_-]{1,60}$", name):
-        raise HTTPException(status_code=400, detail="Nombre inválido: usá letras, números, - o _")
+        raise HTTPException(status_code=400, detail="Nombre inválido: usa letras, números, - o _")
     if not target:
         raise HTTPException(status_code=400, detail="Falta la URL o el comando")
     cfg = _mcp_cfg()
