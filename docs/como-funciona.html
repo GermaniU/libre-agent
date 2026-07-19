@@ -137,19 +137,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 └──────┬───────┘   └──────┬────────┘
        └─────────┬────────┘
                  ▼
-         ┌────────────────┐   agent.py = build_system + finalize
-         │  núcleo agente │   (un turno se resuelve igual en todos)
+         ┌────────────────┐   agent.run_turn (un turno se resuelve igual en todos)
+         │  núcleo agente │
          └───────┬────────┘
     ┌────────────┼───────────────┬───────────────┐
     ▼            ▼               ▼               ▼
-┌────────┐  ┌─────────┐   ┌────────────┐  ┌──────────┐
-│ ollama │  │  tools  │   │ mcp_bridge │  │  vault   │
-│ (chat) │  │ locales │   │ (mcp.json) │  │  (RAG)   │
-└────────┘  └─────────┘   └─────┬──────┘  └──────────┘
-                                ▼
-                       ┌──────────────────┐
-                       │   mcp-memory     │  memoria semántica
-                       │  (otra máquina)  │  Ollama emb + Qdrant
+┌──────────┐┌─────────┐   ┌────────────┐  ┌──────────┐
+│ modelos  ││  tools  │   │ mcp_bridge │  │  vault   │
+│          ││ locales │   │ (mcp.json) │  │  (RAG)   │
+│ ollama   │└─────────┘   └─────┬──────┘  └──────────┘
+│ llama.cpp│                    ▼
+│ (:8080,  │           ┌──────────────────┐
+│  OpenAI) │           │   mcp-memory     │  memoria semántica
+└──────────┘           │  (otra máquina)  │  Ollama emb + Qdrant
                        └──────────────────┘</pre></div>
     <div class="box have"><div class="bt">Por qué así</div><p>Separar <em>gateway</em> de <em>núcleo</em> es lo que evita el bug clásico de "la UI hace una cosa y el bot otra". Un turno de chat es una función pura de orquestación; los gateways solo adaptan entrada/salida (HTTP streaming vs. mensajes de Telegram).</p></div>
   </div></div>
@@ -178,7 +178,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="sb"><div class="bi">
     <table class="t"><thead><tr><th>Módulo</th><th>Líneas</th><th>Responsabilidad</th></tr></thead><tbody>
       <tr><td><code>agent.py</code></td><td>43</td><td>Núcleo compartido: <code>build_system</code> (prompt + recall) y <code>finalize</code> (save + trace).</td></tr>
-      <tr><td><code>clients.py</code></td><td>291</td><td>Cliente ollama: chat, streaming con tools, ventana de contexto + corpus/RAG del vault.</td></tr>
+      <tr><td><code>clients.py</code></td><td>~560</td><td>Inferencia: ollama + backend OpenAI (llama.cpp, con tools) + corpus/RAG del vault.</td></tr>
       <tr><td><code>tools.py</code></td><td>376</td><td>Tools locales: web, vault, filesystem, shell (con guardas), HTML, skills.</td></tr>
       <tr><td><code>api.py</code></td><td>417</td><td>Backend FastAPI: sirve la SPA y expone el agente por HTTP (streaming NDJSON).</td></tr>
       <tr><td><code>app.py</code></td><td>345</td><td>UI clásica en Streamlit (alternativa a la SPA).</td></tr>
