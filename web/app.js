@@ -243,7 +243,9 @@ function render() {
 }
 
 function renderSidebar() {
-  const sessions = Object.entries(state.sessions).sort((a, b) => (a[1].updated || 0) - (b[1].updated || 0));
+  // most-recently-used first (like ChatGPT/Claude): new/active chats bubble to the top,
+  // and the list stays stable instead of looking scrambled by number
+  const sessions = Object.entries(state.sessions).sort((a, b) => (b[1].updated || 0) - (a[1].updated || 0));
   const activeId = state.activeId;
   const status = modelStatus();
 
