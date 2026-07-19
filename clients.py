@@ -9,6 +9,39 @@ import config
 log = logging.getLogger("localagent.clients")
 
 
+def _parse_text_tool_calls(text):
+    """Rescue tool calls that a model emitted as TEXT instead of ollama's structured field.
+
+    Hermes/Qwen-style models write e.g. ``<tool_call>{"name": "...", "arguments": {...}}
+    </tool_call>`` (sometimes only the closing tag). Returns them in ollama's structured
+    shape, or [] if there are none. Gated on a ``<tool_call>`` / ``</tool_call>`` marker so
+    plain JSON inside a normal answer is never misread as a tool call. Uses the JSON decoder
+    (not a regex) so nested objects and braces inside strings parse correctly.
+    """
+    text = text or ""
+    if "tool_call>" not in text:
+        return []
+    out = []
+    decoder = json.JSONDecoder()
+    parts = text.split("</tool_call>")
+    for i, segment in enumerate(parts):
+        ended_with_close = i < len(parts) - 1
+        if not ended_with_close and "<tool_call>" not in segment:
+            continue
+        chunk = segment.rsplit("<tool_call>", 1)[-1]
+        start = chunk.find("{")
+        if start < 0:
+            continue
+        try:
+            obj, _ = decoder.raw_decode(chunk[start:].strip())
+        except ValueError:
+            continue
+        if isinstance(obj, dict) and obj.get("name"):
+            args = obj.get("arguments", obj.get("parameters", {}))
+            out.append({"function": {"name": obj["name"], "arguments": args}})
+    return out
+
+
 # ---------------------------------------------------------------- Ollama
 def list_local_models():
     """Returns ALL local models (excludes only :cloud).
@@ -145,10 +178,17 @@ def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None
         usage["gen"] += data.get("eval_count", 0)
         usage["rounds"] += 1
         usage["ctx"] = _ctx_estimate(msgs + [msg], step)
+        content = msg.get("content", "")
         tool_calls = msg.get("tool_calls")
         if not tool_calls:
-            return msg.get("content", ""), calls_log, usage
-        msgs.append(msg)
+            parsed = _parse_text_tool_calls(content) if specs else []
+            if not parsed:
+                return content, calls_log, usage
+            # model wrote the tool call as text; rescue it and run it
+            tool_calls = parsed
+            msgs.append({"role": "assistant", "content": content})
+        else:
+            msgs.append(msg)
         for tc in tool_calls:
             fn = tc.get("function", {})
             name, args = fn.get("name", "?"), fn.get("arguments") or {}
@@ -231,9 +271,15 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
         usage["ctx"] = _ctx_estimate(msgs + [{"role": "assistant", "content": content}], step)
 
         if not tool_calls:
-            yield ("done", {"reply": content, "calls": calls_log, "usage": usage})
-            return
-        msgs.append({"role": "assistant", "content": content, "tool_calls": tool_calls})
+            parsed = _parse_text_tool_calls(content) if specs else []
+            if not parsed:
+                yield ("done", {"reply": content, "calls": calls_log, "usage": usage})
+                return
+            # model wrote the tool call as text; rescue it and run it
+            tool_calls = parsed
+            msgs.append({"role": "assistant", "content": content})
+        else:
+            msgs.append({"role": "assistant", "content": content, "tool_calls": tool_calls})
         for tc in tool_calls:
             fn = tc.get("function", {})
             name, args = fn.get("name", "?"), fn.get("arguments") or {}
