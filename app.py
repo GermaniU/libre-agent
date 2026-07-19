@@ -7,7 +7,6 @@ import json
 import logging
 import os
 import subprocess
-import time
 
 import psutil
 import streamlit as st
@@ -18,7 +17,6 @@ import agent
 import clients
 import config
 import mcp_bridge
-import memory
 import store
 import trace
 
@@ -282,58 +280,43 @@ if prompt:
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    system, recalled = agent.build_system(_soul(), prompt, use_memory)
-    api_msgs = [{"role": "system", "content": system}]
-    api_msgs += [{"role": m["role"], "content": m["content"]} for m in sess["messages"]]
-
-    reply, calls_log, usage = "", [], {"total": 0, "gen": 0, "ctx": sess.get("ctx", 0)}
-    saved_ok = False
-    meta = None
-    err_msg = None
+    # the shared turn loop; this gateway only paints widgets + persists
+    result = None
     with st.chat_message("assistant"):
-        if recalled:
-            st.caption(f"💾 recordé {len(recalled)} cosa(s) tuya(s)")
         slot = st.empty()
-        t0 = time.time()
-        try:
-            acc = ""
-            for kind, pl in clients.chat_stream_with_tools(model, api_msgs, temperature=temp,
-                                                           bridge=bridge, use_tools=use_tools,
-                                                           think=think):
-                if kind == "token":
-                    acc += pl
-                    slot.markdown(acc + " ▌")
-                elif kind == "tool":
-                    slot.markdown(acc + f"\n\n> 🛠️ `{pl[0]}` {json.dumps(pl[1], ensure_ascii=False)[:120]}")
-                elif kind == "done":
-                    reply, calls_log, usage = pl["reply"], pl["calls"], pl["usage"]
-            slot.markdown(reply)
-            secs = time.time() - t0
-            gen = usage.get("gen", 0)
-            meta = {"gen": gen, "total": usage["total"], "secs": round(secs, 1),
-                    "tps": round(gen / secs, 1) if secs > 0 else 0}
+        acc = ""
+        for ev in agent.run_turn(model, sess["messages"], prompt, _soul(),
+                                 channel="web", temperature=temp, use_tools=use_tools,
+                                 think=think, use_memory=use_memory, bridge=bridge, stream=True):
+            t = ev["type"]
+            if t == "recall" and ev["count"]:
+                st.caption(f"💾 recordé {ev['count']} cosa(s) tuya(s)")
+            elif t == "token":
+                acc += ev["token"]
+                slot.markdown(acc + " ▌")
+            elif t == "tool":
+                slot.markdown(acc + f"\n\n> 🛠️ `{ev['name']}` {json.dumps(ev['args'], ensure_ascii=False)[:120]}")
+            elif t == "error":
+                slot.error(ev["text"])
+            elif t == "done":
+                result = ev
+        if not result["error"]:
+            slot.markdown(result["reply"])
+        meta = result["meta"]
+        if meta and not result["error"]:
             st.caption(f"⏱️ {meta['secs']}s · {meta['gen']} tokens · {meta['tps']} tok/s")
-            sess["tokens"] = sess.get("tokens", 0) + usage["total"]
-            sess["ctx"] = usage["ctx"]
-            saved_ok = True
-        except Exception as e:
-            reply = f"⚠️ Error del modelo local: {e}"
-            err_msg = str(e)
-            slot.error(reply)
 
+    reply, calls_log, usage = result["reply"], result["calls"], result["usage"]
+    sess["tokens"] = sess.get("tokens", 0) + usage.get("total", 0)
+    sess["ctx"] = usage.get("ctx", sess.get("ctx", 0))
     idx = len(sess["messages"])
     sess["messages"].append({"role": "assistant", "content": reply})
     if calls_log:
         sess.setdefault("tools", {})[str(idx)] = calls_log
     if meta:
         sess.setdefault("meta", {})[str(idx)] = meta
-    # shared core: memory auto-save + trace (identical to what the bot does)
-    secs = (meta or {}).get("secs", 0)
-    saved_facts, _ = agent.finalize("web", prompt, reply, calls_log, usage, secs, model,
-                                    use_memory=use_memory and saved_ok, recalled=recalled,
-                                    error=err_msg)
-    if saved_facts:
-        sess.setdefault("mem", {})[str(idx)] = saved_facts
-        st.caption(f"💾 {len(saved_facts)} recuerdo(s) guardado(s) en memoria")
+    if result["saved_facts"]:
+        sess.setdefault("mem", {})[str(idx)] = result["saved_facts"]
+        st.caption(f"💾 {len(result['saved_facts'])} recuerdo(s) guardado(s) en memoria")
     store.save_session(st.session_state.current, sess)   # persist the exchange
     _draw_ctx()

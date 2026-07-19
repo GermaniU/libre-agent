@@ -7,7 +7,6 @@ import json
 import logging
 import os
 import re
-import time
 from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException
@@ -19,7 +18,6 @@ import agent
 import clients
 import config
 import mcp_bridge
-import skills
 import store
 
 # Entry point: configure logging once (LOG_LEVEL env overrides; default INFO).
@@ -286,15 +284,10 @@ def chat(req: ChatRequest):
         # add the user message
         sess["messages"].append({"role": "user", "content": req.message})
 
-        # build system prompt + memory recall (the front can override the soul)
+        # the front can override the soul for this session
         soul = req.system.strip() if req.system and req.system.strip() else agent.load_soul()
-        system, recalled = agent.build_system(soul, req.message, req.use_memory)
-        api_msgs = [{"role": "system", "content": system}]
-        api_msgs += [{"role": m["role"], "content": m["content"]} for m in sess["messages"]]
 
-        yield _event("recall", {"count": len(recalled), "facts": recalled})
-
-        # connect the selected MCPs (same as the multiselect in app.py)
+        # connect the selected MCPs (this gateway owns the bridge lifecycle)
         bridge = None
         if req.mcp_servers:
             try:
@@ -302,11 +295,6 @@ def chat(req: ChatRequest):
             except Exception as e:
                 yield _event("warning", {"text": f"MCP: {e}"})
 
-        reply, calls_log, usage = "", [], {"total": 0, "gen": 0, "ctx": sess.get("ctx", 0)}
-        meta = None
-        err_msg = None
-        saved_ok = False
-        saved_facts = []
         opts = {}
         if req.top_p is not None:
             opts["top_p"] = req.top_p
@@ -314,35 +302,28 @@ def chat(req: ChatRequest):
             opts["num_predict"] = req.max_tokens
         if req.num_ctx:
             opts["num_ctx"] = req.num_ctx
-        t0 = time.time()
+
+        # the shared turn loop; this gateway only translates events to NDJSON + persists
+        reply, calls_log, usage, meta, saved_facts, err_msg = "", [], {}, None, [], None
         try:
-            for kind, pl in clients.chat_stream_with_tools(
-                req.model, api_msgs,
-                temperature=req.temperature,
-                bridge=bridge,
-                use_tools=req.use_tools,
-                think=req.think,
-                options=opts,
+            for ev in agent.run_turn(
+                req.model, sess["messages"], req.message, soul,
+                channel="web", temperature=req.temperature, options=opts,
+                use_tools=req.use_tools, think=req.think, use_memory=req.use_memory,
+                bridge=bridge, stream=True,
             ):
-                if kind == "token":
-                    yield _event("token", {"token": pl})
-                elif kind == "tool":
-                    name, args = pl
-                    yield _event("tool", {"name": name, "args": args})
-                elif kind == "done":
-                    reply, calls_log, usage = pl["reply"], pl["calls"], pl["usage"]
-            secs = time.time() - t0
-            gen = usage.get("gen", 0)
-            meta = {"gen": gen, "total": usage.get("total", 0),
-                    "secs": round(secs, 1),
-                    "tps": round(gen / secs, 1) if secs > 0 else 0}
-            sess["tokens"] = sess.get("tokens", 0) + usage.get("total", 0)
-            sess["ctx"] = usage.get("ctx", sess.get("ctx", 0))
-            saved_ok = True
-        except Exception as e:
-            err_msg = str(e)
-            reply = f"⚠️ Error del modelo local: {e}"
-            yield _event("error", {"text": reply})
+                t = ev["type"]
+                if t == "recall":
+                    yield _event("recall", {"count": ev["count"], "facts": ev["facts"]})
+                elif t == "token":
+                    yield _event("token", {"token": ev["token"]})
+                elif t == "tool":
+                    yield _event("tool", {"name": ev["name"], "args": ev["args"]})
+                elif t == "error":
+                    yield _event("error", {"text": ev["text"]})
+                elif t == "done":
+                    reply, calls_log, usage = ev["reply"], ev["calls"], ev["usage"]
+                    meta, saved_facts, err_msg = ev["meta"], ev["saved_facts"], ev["error"]
         finally:
             if bridge:
                 try:
@@ -350,25 +331,15 @@ def chat(req: ChatRequest):
                 except Exception:
                     log.debug("error closing MCP bridge after turn", exc_info=True)
 
+        # persist the exchange (gateway-specific)
+        sess["tokens"] = sess.get("tokens", 0) + usage.get("total", 0)
+        sess["ctx"] = usage.get("ctx", sess.get("ctx", 0))
         idx = len(sess["messages"])
         sess["messages"].append({"role": "assistant", "content": reply})
         if calls_log:
             sess.setdefault("tools", {})[str(idx)] = calls_log
-
-        # shared post-turn: memory + trace
-        try:
-            secs = (meta or {}).get("secs", 0)
-            saved_facts, _ = agent.finalize(
-                "web", req.message, reply, calls_log, usage, secs, req.model,
-                use_memory=req.use_memory and saved_ok,
-                recalled=recalled,
-                error=err_msg,
-            )
-            if saved_facts:
-                sess.setdefault("mem", {})[str(idx)] = saved_facts
-        except Exception:
-            log.warning("post-turn finalize (memory/trace) failed", exc_info=True)
-
+        if saved_facts:
+            sess.setdefault("mem", {})[str(idx)] = saved_facts
         store.save_session(sess_name, sess)
 
         yield _event("done", {

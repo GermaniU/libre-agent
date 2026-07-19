@@ -224,31 +224,27 @@ HELP = ("🧠 *LocalAgent Bot*\n"
 
 def handle_chat(chat, text):
     state["messages"].append({"role": "user", "content": text})
-    # same core as the UI: memory recall + system prompt
-    system, recalled = agent.build_system(_soul(), text, use_memory=True)
-    api_msgs = [{"role": "system", "content": system}] + state["messages"]
     typing(chat)
-    t0 = time.time()
-    try:
-        reply, log, usage = clients.chat_with_tools(
-            state["model"], api_msgs, bridge=state["bridge"],
-            on_tool=lambda n, a: typing(chat))
-    except Exception as e:
-        state["messages"].pop()
-        agent.finalize("telegram", text, "", [], {}, time.time() - t0, state["model"],
-                       use_memory=False, recalled=recalled, error=str(e))
-        send(chat, f"⚠️ Error del modelo: {e}")
+    # the shared turn loop (non-streaming); typing() pulses on each tool call
+    result = None
+    for ev in agent.run_turn(
+        state["model"], state["messages"], text, _soul(),
+        channel="telegram", use_memory=True, bridge=state["bridge"],
+        stream=False, on_tool=lambda n, a: typing(chat),
+    ):
+        if ev["type"] == "done":
+            result = ev
+    if result["error"]:
+        state["messages"].pop()  # keep the failed turn out of the history
+        send(chat, result["reply"])
         return
+    reply, calls, usage, meta = result["reply"], result["calls"], result["usage"], result["meta"]
     state["messages"].append({"role": "assistant", "content": reply})
     state["tokens"] += usage["total"]
     state["ctx"] = usage["ctx"]
-    secs = time.time() - t0
-    # same core: memory auto-save + trace (identical to the UI)
-    _, meta = agent.finalize("telegram", text, reply, log, usage, secs, state["model"],
-                             use_memory=True, recalled=recalled)
-    tools_used = f" · 🛠️ {', '.join(t['tool'] for t in log)}" if log else ""
+    tools_used = f" · 🛠️ {', '.join(t['tool'] for t in calls)}" if calls else ""
     send(chat, reply + f"\n\n`{meta['gen']:,} tok · {meta['secs']:.0f}s · {meta['tps']} tok/s{tools_used}`")
-    send_media(chat, log)
+    send_media(chat, calls)
 
 
 def main():

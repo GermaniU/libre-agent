@@ -5,7 +5,9 @@ Keeping this here (instead of duplicated per channel) is what makes the gateways
 maintainable: one place for a turn's logic, many frontends.
 """
 import os
+import time
 
+import clients
 import memory
 import prompts
 import skills
@@ -34,6 +36,66 @@ def build_system(soul_text, prompt, use_memory=True, k=4):
         header = prompts.load("memory_recall_header.txt", "## Memory")
         system += "\n\n" + header + "\n" + "\n".join(f"- {m}" for m in recalled)
     return system, recalled
+
+
+def run_turn(model, history, prompt, soul, *, channel="web", temperature=0.4,
+             options=None, use_tools=True, think=None, use_memory=True,
+             bridge=None, stream=True, on_tool=None):
+    """Run one full agent turn as a generator of events. THE shared turn loop.
+
+    Every gateway (SPA, Streamlit UI, Telegram bot) consumes these events and only
+    handles its own transport (NDJSON / widgets / messages) and persistence. The core
+    — system-prompt assembly, memory recall, the tool loop and auto-save/trace — lives
+    here so the channels never diverge.
+
+    ``history`` is the conversation so far (role/content dicts) INCLUDING the new user
+    message. ``soul`` is the system prompt (the caller may override it per session).
+
+    Yields event dicts by ``type``:
+      {"type": "recall", "count": N, "facts": [...]}
+      {"type": "token", "token": "..."}            (only when stream=True)
+      {"type": "tool", "name": "...", "args": {...}}
+      {"type": "error", "text": "..."}             (before the final done, on failure)
+      {"type": "done", "reply", "calls", "usage", "meta", "saved_facts", "error"}
+    """
+    system, recalled = build_system(soul, prompt, use_memory)
+    messages = [{"role": "system", "content": system}]
+    messages += [{"role": m["role"], "content": m["content"]} for m in history]
+    yield {"type": "recall", "count": len(recalled), "facts": recalled}
+
+    reply, calls_log = "", []
+    usage = {"total": 0, "gen": 0, "ctx": 0}
+    err_msg = None
+    saved_ok = False
+    t0 = time.time()
+    try:
+        if stream:
+            for kind, pl in clients.chat_stream_with_tools(
+                    model, messages, temperature=temperature, bridge=bridge,
+                    use_tools=use_tools, think=think, options=options):
+                if kind == "token":
+                    yield {"type": "token", "token": pl}
+                elif kind == "tool":
+                    name, args = pl
+                    yield {"type": "tool", "name": name, "args": args}
+                elif kind == "done":
+                    reply, calls_log, usage = pl["reply"], pl["calls"], pl["usage"]
+        else:
+            reply, calls_log, usage = clients.chat_with_tools(
+                model, messages, temperature=temperature, bridge=bridge,
+                use_tools=use_tools, think=think, on_tool=on_tool)
+        saved_ok = True
+    except Exception as e:
+        err_msg = str(e)
+        reply = f"⚠️ Error del modelo local: {e}"
+        yield {"type": "error", "text": reply}
+
+    secs = time.time() - t0
+    saved_facts, meta = finalize(channel, prompt, reply, calls_log, usage, secs, model,
+                                 use_memory=use_memory and saved_ok, recalled=recalled,
+                                 error=err_msg)
+    yield {"type": "done", "reply": reply, "calls": calls_log, "usage": usage,
+           "meta": meta, "saved_facts": saved_facts, "error": err_msg}
 
 
 def finalize(channel, prompt, reply, calls, usage, secs, model,
