@@ -132,7 +132,12 @@ class McpAdd(BaseModel):
 
 
 class McpEdit(BaseModel):
-    target: str
+    target: Optional[str] = None
+    config: Optional[dict] = None
+
+
+class McpImport(BaseModel):
+    text: str
 
 
 def _mcp_cfg():
@@ -167,7 +172,12 @@ def _mcp_target_of(s):
 
 
 def _mcp_view(cfg):
-    """Public list of servers: name + type + target + env (without env values)."""
+    """Public list of servers: name + type + target + env (without env values) + raw config.
+
+    This app is local single-user (CORS restricted to localhost), so it's fine to
+    also expose "raw" (the full config dict, including env values) to let the
+    frontend edit arbitrary/unforeseen server configs as JSON.
+    """
     out = []
     for name, s in cfg["mcpServers"].items():
         is_http = s.get("type") == "http" or "url" in s
@@ -176,6 +186,7 @@ def _mcp_view(cfg):
             "type": "http" if is_http else "stdio",
             "target": _mcp_target_of(s),
             "env_keys": sorted((s.get("env") or {}).keys()),  # keys only, never values
+            "raw": s,
         })
     return out
 
@@ -204,20 +215,63 @@ def add_mcp(req: McpAdd):
 
 @app.put("/api/mcps/{name}")
 def edit_mcp(name: str, req: McpEdit):
-    target = req.target.strip()
-    if not target:
-        raise HTTPException(status_code=400, detail="Falta la URL o el comando")
     cfg = _mcp_cfg()
     if name not in cfg["mcpServers"]:
         raise HTTPException(status_code=404, detail="No existe ese MCP")
-    # preserve existing env (e.g. tokens) when changing only the URL/command
-    prev_env = cfg["mcpServers"][name].get("env")
-    new = _mcp_server_from_target(target)
-    if prev_env:
-        new["env"] = prev_env
-    cfg["mcpServers"][name] = new
+
+    if req.config is not None:
+        # raw JSON edit: writes the server config verbatim (env values included)
+        if not isinstance(req.config, dict) or not req.config:
+            raise HTTPException(status_code=400, detail="La config debe ser un objeto JSON no vacío")
+        cfg["mcpServers"][name] = req.config
+    else:
+        target = (req.target or "").strip()
+        if not target:
+            raise HTTPException(status_code=400, detail="Falta la URL o el comando")
+        # preserve existing env (e.g. tokens) when changing only the URL/command
+        prev_env = cfg["mcpServers"][name].get("env")
+        new = _mcp_server_from_target(target)
+        if prev_env:
+            new["env"] = prev_env
+        cfg["mcpServers"][name] = new
+
     _mcp_save(cfg)
     return {"ok": True, "servers": list(cfg["mcpServers"].keys()), "configs": _mcp_view(cfg)}
+
+
+@app.post("/api/mcps/import")
+def import_mcps(req: McpImport):
+    try:
+        parsed = json.loads(req.text)
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"JSON inválido: {e}") from e
+
+    if isinstance(parsed, dict) and isinstance(parsed.get("mcpServers"), dict):
+        servers = parsed["mcpServers"]
+    elif isinstance(parsed, dict):
+        servers = parsed
+    else:
+        raise HTTPException(status_code=400, detail="JSON inválido: se esperaba un objeto")
+
+    if not servers:
+        raise HTTPException(status_code=400, detail="No hay servidores para importar")
+
+    for sname, sconf in servers.items():
+        if not re.match(r"^[a-zA-Z0-9_-]{1,60}$", sname):
+            raise HTTPException(status_code=400, detail=f"Nombre inválido: '{sname}'")
+        if not isinstance(sconf, dict) or not ("command" in sconf or "url" in sconf or "type" in sconf):
+            raise HTTPException(status_code=400, detail=f"Config inválida para '{sname}'")
+
+    cfg = _mcp_cfg()
+    for sname, sconf in servers.items():
+        cfg["mcpServers"][sname] = sconf
+    _mcp_save(cfg)
+    return {
+        "ok": True,
+        "added": list(servers.keys()),
+        "servers": list(cfg["mcpServers"].keys()),
+        "configs": _mcp_view(cfg),
+    }
 
 
 @app.delete("/api/mcps/{name}")

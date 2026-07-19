@@ -19,11 +19,14 @@ def test_target_of_ida_y_vuelta():
         assert api._mcp_target_of(api._mcp_server_from_target(target)) == target
 
 
-def test_view_no_expone_valores_de_env():
+def test_view_env_keys_y_raw():
+    # env_keys sigue siendo solo las claves (para el display colapsado); "raw" expone
+    # la config completa (incluidos los valores de env) para poder editarla en el form
+    # genérico — la app es local single-user, así que no hace falta ocultarlos.
     cfg = {"mcpServers": {"s": {"command": "x", "args": [], "env": {"TOKEN": "secreto"}}}}
     view = api._mcp_view(cfg)
     assert view[0]["env_keys"] == ["TOKEN"]
-    assert "secreto" not in str(view)
+    assert view[0]["raw"] == {"command": "x", "args": [], "env": {"TOKEN": "secreto"}}
 
 
 def test_safe_file_dentro_y_fuera(tmp_path):

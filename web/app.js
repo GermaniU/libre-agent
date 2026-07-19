@@ -45,9 +45,10 @@ const state = {
   soulDraft: '',
   mcpNew: { name: '', target: '' },
   mcpError: null,
-  mcpConfigs: [],      // [{name, type, target, env_keys}]
+  mcpConfigs: [],      // [{name, type, target, env_keys, raw}]
   mcpEditing: null,    // name of the server being edited
   mcpEditVal: '',
+  mcpImportText: '',
 };
 
 // ----------------------------------------------------------------- utilities
@@ -817,8 +818,9 @@ function renderCfgMcp() {
         </div>
         ${editing ? `
           <div style="border-top:1px solid var(--bd);padding:10px 12px;display:flex;flex-direction:column;gap:8px">
-            <span style="font-size:11.5px;color:var(--tx3)">URL http(s) o comando con args. ${conf.env_keys.length ? 'Las variables de entorno se preservan.' : ''}</span>
-            <input data-input="mcpEdit" value="${esc(state.mcpEditVal)}" style="width:100%;height:34px;border:1px solid var(--bd);border-radius:8px;background:var(--bg1);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:0 10px">
+            <span style="font-size:11.5px;color:var(--tx3)">Config JSON completa del server (incluye env con sus valores).</span>
+            <textarea data-input="mcpEdit" rows="8" spellcheck="false" style="width:100%;border:1px solid var(--bd);border-radius:8px;background:var(--bg1);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:8px 10px;resize:vertical">${esc(state.mcpEditVal)}</textarea>
+            ${state.mcpError ? `<div style="font-size:12px;color:var(--err)">${esc(state.mcpError)}</div>` : ''}
             <div style="display:flex;gap:8px">
               <button data-action="saveMcp" data-name="${esc(name)}" style="height:30px;padding:0 14px;border:none;border-radius:8px;background:var(--ac);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">Guardar</button>
               <button data-action="cancelMcp" style="height:30px;padding:0 12px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx3);font-family:inherit;font-size:12px;cursor:pointer">Cancelar</button>
@@ -831,8 +833,15 @@ function renderCfgMcp() {
       <div style="font-size:12px;font-weight:600;color:var(--tx2)">Agregar servidor</div>
       <input data-input="mcpName" value="${esc(state.mcpNew?.name || '')}" placeholder="nombre (ej: agentic-memory-mcp)" title="Nombre del server: letras, números, - y _" style="width:100%;height:34px;border:1px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:0 10px">
       <input data-input="mcpTarget" value="${esc(state.mcpNew?.target || '')}" placeholder="http://host:puerto/mcp  ó  comando args…" title="URL http(s) para servers remotos, o el comando con argumentos para servers stdio locales" style="width:100%;height:34px;border:1px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:0 10px">
-      ${state.mcpError ? `<div style="font-size:12px;color:var(--err)">${esc(state.mcpError)}</div>` : ''}
+      ${state.mcpError && !state.mcpEditing ? `<div style="font-size:12px;color:var(--err)">${esc(state.mcpError)}</div>` : ''}
       <button data-action="addMcp" style="height:32px;border:none;border-radius:8px;background:var(--ac);color:#fff;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer">Agregar</button>
+    </div>
+    <div style="border:1px dashed var(--bd2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:12px;font-weight:600;color:var(--tx2)">Importar</div>
+      <div style="font-size:11.5px;color:var(--tx3);line-height:1.5">Pegá uno o varios servers (formato <code style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--bg3);border-radius:5px;padding:1px 5px">mcpServers</code> de Claude). Se agregan o reemplazan por nombre.</div>
+      <textarea data-input="mcpImport" rows="6" spellcheck="false" placeholder='{"mcpServers": {"mi-server": {"command": "npx", "args": ["-y", "algo"]}}}' style="width:100%;border:1px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:8px 10px;resize:vertical">${esc(state.mcpImportText)}</textarea>
+      ${state.mcpError && !state.mcpEditing ? `<div style="font-size:12px;color:var(--err)">${esc(state.mcpError)}</div>` : ''}
+      <button data-action="importMcps" style="height:32px;border:none;border-radius:8px;background:var(--ac);color:#fff;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer">Importar</button>
     </div>
   </div>`;
 }
@@ -899,12 +908,18 @@ function attachEvents() {
       case 'editMcp': {
         const n = btn.dataset.name;
         if (state.mcpEditing === n) { state.mcpEditing = null; }
-        else { state.mcpEditing = n; state.mcpEditVal = (state.mcpConfigs.find(c => c.name === n) || {}).target || ''; state.mcpError = null; }
+        else {
+          state.mcpEditing = n;
+          const conf = state.mcpConfigs.find(c => c.name === n);
+          state.mcpEditVal = JSON.stringify(conf?.raw ?? {}, null, 2);
+          state.mcpError = null;
+        }
         render();
         break;
       }
       case 'cancelMcp': state.mcpEditing = null; state.mcpError = null; render(); break;
       case 'saveMcp': await saveMcp(btn.dataset.name); break;
+      case 'importMcps': await importMcps(); break;
       case 'closeCfg': state.cfgOpen = false; state.soulEditing = false; render(); break;
       case 'openMenu':
         e.stopPropagation();
@@ -1013,6 +1028,7 @@ function attachEvents() {
       case 'mcpName': state.mcpNew.name = t.value; break;
       case 'mcpTarget': state.mcpNew.target = t.value; break;
       case 'mcpEdit': state.mcpEditVal = t.value; break;
+      case 'mcpImport': state.mcpImportText = t.value; break;
       case 'rename': state.renameVal = t.value; break;
     }
   });
@@ -1162,11 +1178,19 @@ async function addMcp() {
 
 async function saveMcp(name) {
   state.mcpError = null;
+  let config;
+  try {
+    config = JSON.parse(state.mcpEditVal);
+  } catch (e) {
+    state.mcpError = 'JSON inválido';
+    render();
+    return;
+  }
   try {
     const r = await fetch(`/api/mcps/${encodeURIComponent(name)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target: state.mcpEditVal }),
+      body: JSON.stringify({ config }),
     });
     if (!r.ok) throw new Error(await r.text());
     const data = await r.json();
@@ -1175,6 +1199,29 @@ async function saveMcp(name) {
     state.mcpEditing = null;
   } catch (e) {
     state.mcpError = e.message.replace(/^\{"detail":"(.*)"\}$/, '$1');
+  }
+  render();
+}
+
+async function importMcps() {
+  state.mcpError = null;
+  try {
+    const r = await fetch('/api/mcps/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: state.mcpImportText }),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    state.mcpServers = data.servers;
+    state.mcpConfigs = data.configs;
+    for (const n of data.added || []) {
+      if (!state.selectedMcps.includes(n)) state.selectedMcps.push(n);
+    }
+    localStorage.setItem('la-mcps2', JSON.stringify(state.selectedMcps));
+    state.mcpImportText = '';
+  } catch (e) {
+    state.mcpError = e.message.replace(/^\d+: /, '').replace(/^\{"detail":"(.*)"\}$/, '$1');
   }
   render();
 }
