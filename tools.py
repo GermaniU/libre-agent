@@ -143,8 +143,11 @@ def write_html(filename, content, title=""):
     except Exception:
         log.debug("could not resolve LAN IP for write_html", exc_info=True)
         ip = "localhost"
-    return (f"Página guardada. Abrila en: http://localhost:8501/app/static/{name}.html"
-            f" (desde otra máquina de la LAN: http://{ip}:8501/app/static/{name}.html)")
+    # The SPA (api.py) serves static/ at the root path; PORT is the SPA port (default 8585).
+    port = os.getenv("PORT", "8585")
+    return (f"Página guardada en static/{name}.html. "
+            f"Abrila en http://localhost:{port}/{name}.html "
+            f"(desde otra máquina de la LAN: http://{ip}:{port}/{name}.html)")
 
 
 def vault_search(query, limit=6):
