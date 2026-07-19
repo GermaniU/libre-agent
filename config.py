@@ -6,6 +6,9 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 CORPUS_URL = os.getenv("CORPUS_URL", "http://localhost:5099/api")  # optional: your own corpus/RAG server
 CORPUS_KEY = os.getenv("CORPUS_KEY", "dev-only-key-cambiar-en-prod")
 COMFYUI_URL = os.getenv("COMFYUI_URL", "http://localhost:8188")
+# Optional extra OpenAI-compatible backend (e.g. llama.cpp's llama-server). Its models are
+# listed alongside ollama's and chatted with via /v1/chat/completions. Empty = disabled.
+LLAMACPP_URL = os.getenv("LLAMACPP_URL", "http://localhost:8080/v1")
 VAULT_DIR = os.getenv("VAULT_DIR", "/mnt/c/Sites/Data")  # physical Obsidian vault (git repo)
 # Root where the model can create projects/scripts (C:\Sites from Windows).
 # To isolate from your existing repos, point to a subfolder, e.g.: /mnt/c/Sites/localagent-projects

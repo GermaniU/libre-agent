@@ -42,9 +42,41 @@ def _parse_text_tool_calls(text):
     return out
 
 
+# Model id -> OpenAI base URL, for models served by an extra OpenAI-compatible backend
+# (llama.cpp). Populated by list_local_models(); used to route chat to the right backend.
+_openai_models = {}
+
+
+def _list_openai_models():
+    """Models exposed by the OpenAI-compatible backend (llama.cpp), or [] if unreachable.
+
+    Also (re)populates the _openai_models registry so chat can route to it.
+    """
+    base = config.LLAMACPP_URL
+    if not base:
+        return []
+    try:
+        r = requests.get(f"{base}/models", timeout=3)
+        r.raise_for_status()
+        data = r.json().get("data", [])
+    except Exception:
+        log.debug("OpenAI backend not reachable at %s", base, exc_info=True)
+        return []
+    out = []
+    for m in data:
+        mid = m.get("id")
+        if not mid:
+            continue
+        _openai_models[mid] = base
+        # fits=True: llama.cpp already loaded it in the configured VRAM budget
+        out.append({"name": mid, "size": 0, "gb": 0, "kind": "chat",
+                    "fits": True, "backend": "llama.cpp"})
+    return out
+
+
 # ---------------------------------------------------------------- Ollama
 def list_local_models():
-    """Returns ALL local models (excludes only :cloud).
+    """Returns ALL local models (ollama + any OpenAI-compatible backend; excludes :cloud).
 
     Each item: {name, size, gb, kind, fits}  kind in {chat, vision, embed};
     fits=False if it does not fit in VRAM (would run partially on CPU, slow).
@@ -67,7 +99,7 @@ def list_local_models():
         out.append({"name": name, "size": size, "gb": round(size / 1024**3, 1),
                     "kind": kind, "fits": size <= config.FIT_BYTES})
     out.sort(key=lambda x: x["name"])
-    return out
+    return out + _list_openai_models()
 
 
 def chat_stream(model, messages, temperature=0.4):
@@ -127,6 +159,88 @@ def _err_text(resp):
         return resp.text.lower()
 
 
+# ---------------------------------------------------------------- OpenAI-compatible backend (llama.cpp)
+def _is_openai(model):
+    """True if `model` is served by the OpenAI-compatible backend (llama.cpp)."""
+    if model in _openai_models:
+        return True
+    if config.LLAMACPP_URL and not _openai_models:  # registry not populated yet
+        _list_openai_models()
+    return model in _openai_models
+
+
+def _openai_payload(model, messages, temperature, options, think=None):
+    payload = {"model": model, "messages": messages, "temperature": temperature}
+    opts = options or {}
+    if opts.get("top_p") is not None:
+        payload["top_p"] = opts["top_p"]
+    if opts.get("num_predict"):
+        payload["max_tokens"] = opts["num_predict"]
+    # snappy assistant by default: disable the model's verbose reasoning unless the
+    # user turned Thinking on. Qwen reads this via its chat template.
+    if think is not True:
+        payload["chat_template_kwargs"] = {"enable_thinking": False}
+    return payload
+
+
+def _openai_stream(base, model, messages, temperature=0.4, options=None, think=None):
+    """Stream a chat from an OpenAI-compatible backend (text only, no tools for now).
+
+    Yields ("token", str) chunks and a final ("done", {reply, calls, usage}).
+    """
+    payload = _openai_payload(model, messages, temperature, options, think)
+    payload["stream"] = True
+    payload["stream_options"] = {"include_usage": True}
+    parts, reasoning = [], []
+    usage = {"total": 0, "ctx": 0, "rounds": 1, "gen": 0}
+    r = requests.post(f"{base}/chat/completions", json=payload, stream=True, timeout=600)
+    r.raise_for_status()
+    for raw in r.iter_lines():
+        if not raw:
+            continue
+        line = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+        if not line.startswith("data:"):
+            continue
+        data = line[5:].strip()
+        if data == "[DONE]":
+            break
+        try:
+            obj = json.loads(data)
+        except ValueError:
+            continue
+        choices = obj.get("choices") or []
+        if choices:
+            delta = choices[0].get("delta") or {}
+            # reasoning models (Qwen w/ --reasoning) split thinking into reasoning_content;
+            # stream it too so the user sees activity, but the final reply is the answer
+            rtok = delta.get("reasoning_content")
+            if rtok:
+                reasoning.append(rtok)
+                yield ("token", rtok)
+            token = delta.get("content")
+            if token:
+                parts.append(token)
+                yield ("token", token)
+        u = obj.get("usage")
+        if u:
+            usage["total"] = usage["ctx"] = u.get("total_tokens", 0)
+            usage["gen"] = u.get("completion_tokens", 0)
+    yield ("done", {"reply": "".join(parts) or "".join(reasoning), "calls": [], "usage": usage})
+
+
+def _openai_call(base, model, messages, temperature=0.4, options=None, think=None):
+    """Non-streaming chat from an OpenAI-compatible backend. Returns (reply, [], usage)."""
+    payload = _openai_payload(model, messages, temperature, options, think)
+    r = requests.post(f"{base}/chat/completions", json=payload, timeout=600)
+    r.raise_for_status()
+    d = r.json()
+    reply = d["choices"][0]["message"].get("content") or ""
+    u = d.get("usage", {})
+    usage = {"total": u.get("total_tokens", 0), "ctx": u.get("total_tokens", 0),
+             "rounds": 1, "gen": u.get("completion_tokens", 0)}
+    return reply, [], usage
+
+
 def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None, bridge=None,
                     use_tools=True, think=None):
     """Agent loop: the model requests tools, we execute them and return the result.
@@ -141,6 +255,8 @@ def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None
     (think=False speeds up reasoning models). If the model does not
     support tools or thinking, that option is removed and it retries (fallback without breaking).
     """
+    if _is_openai(model):  # OpenAI-compatible backend (llama.cpp): no tools for now
+        return _openai_call(_openai_models[model], model, messages, temperature, think=think)
     import tools
     specs = (tools.SPECS + (bridge.specs if bridge else [])) if use_tools else None
     msgs = list(messages)
@@ -216,6 +332,9 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
       ("done",  {"reply","calls","usage"}) -> end, with the complete result
     Resolves the tool rounds in streaming; the final text tokens come out live.
     """
+    if _is_openai(model):  # OpenAI-compatible backend (llama.cpp): stream text, no tools yet
+        yield from _openai_stream(_openai_models[model], model, messages, temperature, options, think)
+        return
     import tools
     specs = (tools.SPECS + (bridge.specs if bridge else [])) if use_tools else None
     msgs = list(messages)

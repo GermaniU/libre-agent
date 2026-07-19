@@ -426,12 +426,12 @@ function ctxTokens(label) {
 
 function renderModelMenu(curDot) {
   return `
-  <div role="listbox" aria-label="Modelo local" style="position:absolute;left:0;top:36px;z-index:50;width:320px;background:var(--bg2);border:1px solid var(--bd);border-radius:12px;box-shadow:var(--shadow);padding:5px;animation:lcIn .12s ease">
-    <div style="padding:7px 10px 5px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3)">Modelo local · Ollama</div>
+  <div role="listbox" aria-label="Modelo local" style="position:absolute;left:0;top:36px;z-index:50;width:320px;max-height:min(64vh,460px);overflow-y:auto;background:var(--bg2);border:1px solid var(--bd);border-radius:12px;box-shadow:var(--shadow);padding:5px;animation:lcIn .12s ease">
+    <div style="position:sticky;top:0;background:var(--bg2);padding:7px 10px 5px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3)">Modelos locales</div>
     ${state.models.map(m => {
       const selected = m.name === state.modelId;
       const dot = m.fits ? 'var(--ok)' : 'var(--cn)';
-      const tag = `${m.gb} GB` + (m.fits ? '' : ' ⚠️ CPU');
+      const tag = m.backend || (`${m.gb} GB` + (m.fits ? '' : ' ⚠️ CPU'));
       const status = m.fits ? 'disponible' : 'CPU (lento)';
       return `
       <button role="option" aria-selected="${selected}" data-action="selectModel" data-id="${esc(m.name)}" style="display:flex;align-items:center;gap:9px;width:100%;border:none;background:${selected ? 'var(--bg3)' : 'transparent'};font-family:inherit;padding:8px 10px;border-radius:8px;cursor:pointer;text-align:left">
@@ -1497,7 +1497,7 @@ async function init() {
     state.models = models.models.map(m => ({
       ...m,
       short: m.name,
-      tag: `${m.gb} GB` + (m.fits ? '' : ' ⚠️ CPU'),
+      tag: m.backend || (`${m.gb} GB` + (m.fits ? '' : ' ⚠️ CPU')),
     }));
     const pick = state.models.find(m => m.name === state.modelId)
               || state.models.find(m => m.name === models.default)
