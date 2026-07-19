@@ -13,12 +13,13 @@ import streamlit as st
 
 log = logging.getLogger("localagent.ui")  # Streamlit configures the root logger
 
+import trace
+
 import agent
 import clients
 import config
 import mcp_bridge
 import store
-import trace
 
 st.set_page_config(page_title="LocalAgent", page_icon="🧠", layout="wide")
 

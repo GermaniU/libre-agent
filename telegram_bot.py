@@ -4,6 +4,7 @@ Commands: /status /model /ctx /new /mcp /help. Any other text goes to the model
 (same soul and tools as the web UI). Only responds to the user in TELEGRAM_ALLOWED_USER.
 Token and allowlist in .env (never committed anywhere).
 """
+import contextlib
 import logging
 import os
 import re
@@ -107,10 +108,8 @@ def send_media(chat, calls_log):
 
 
 def typing(chat):
-    try:
+    with contextlib.suppress(Exception):
         rq.post(f"{API}/sendChatAction", json={"chat_id": chat, "action": "typing"}, timeout=10)
-    except Exception:
-        pass
 
 
 def _gpu_line():

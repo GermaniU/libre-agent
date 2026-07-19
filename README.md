@@ -43,8 +43,10 @@ prácticas.
 - 📄 **[Leer en GitHub (markdown)](docs/como-funciona.md)** — se lee directo, sin descargar nada.
 - 🖥️ **[Versión interactiva (HTML)](docs/como-funciona.html)** — misma info con acordeón y
   nav; descargala y abrila en el navegador (GitHub no renderiza HTML, muestra el fuente).
+- 🦙 **[Backend llama.cpp](docs/llama-cpp.md)** — correr modelos con MTP / cuantizaciones
+  exóticas (ej. Qwen3.6-35B-A3B) además de ollama.
 
-> Ambas versiones tienen el **mismo contenido**; elegí la que te resulte más cómoda.
+> Las dos primeras tienen el **mismo contenido**; elegí la que te resulte más cómoda.
 
 ## 💡 Por qué existe
 
@@ -146,8 +148,10 @@ Ver `mcp.json.example`. El `mcp.json` está git-ignored (puede llevar claves en 
 | **HTML** | generar documentos/páginas HTML (`write_html`) |
 | **Thinking** | razonamiento extendido (solo en modelos que lo soportan) |
 | **Memoria** | recordar hechos entre chats vía mcp-memory (auto-recall + auto-save) |
-| **MCP** | cualquier tool de los servidores declarados en `mcp.json` |
+| **MCP** | cualquier tool de los servidores declarados en `mcp.json` (editor genérico + importar bloque) |
 | **Filesystem / Shell** | crear proyectos y correr comandos, confinado a `WORKSPACE_DIR` |
+| **Contexto** | **Nuevo** + **Compactar** (resume la conversación para liberar contexto) + auto-compact al 85% |
+| **Backend llama.cpp** | usar modelos de `llama-server` (MTP, cuantizaciones exóticas) junto a ollama — [docs](docs/llama-cpp.md) |
 
 Cada capacidad se prende/apaga por chat desde el compositor.
 
@@ -157,9 +161,11 @@ Cada capacidad se prende/apaga por chat desde el compositor.
 
 **Lo que hace** ✅
 - Chat multi-sesión en streaming con modelos locales, selección por VRAM.
+- Dos backends: **ollama** y **llama.cpp** (`llama-server`, con MTP) — sus modelos aparecen juntos.
 - Memoria persistente semántica (vía mcp-memory) y RAG sobre tus notas.
-- Tools locales con guardas + puente a cualquier servidor MCP.
-- Dos frentes: UI web (SPA) y bot de Telegram, sobre el mismo núcleo.
+- Tools locales con guardas + puente a cualquier servidor MCP (en ambos backends).
+- Gestión de contexto: nuevo chat, compactar y auto-compact.
+- Dos frentes: UI web (SPA) y bot de Telegram, sobre el mismo núcleo (`agent.run_turn`).
 
 **Lo que NO hace (todavía)** ❌
 - No es un sandbox: `run_cmd` corre comandos de dev que el modelo decide.
@@ -203,15 +209,18 @@ La lógica de un turno vive en `agent.py`, así **UI y bot no divergen**.
 - `web/` — frontend SPA en JS vanilla (sin build): `app.js`, `index.html`, `style.css`.
 - `app.py` — UI clásica en Streamlit (alternativa a la SPA).
 - `telegram_bot.py` — bot de Telegram (mismo núcleo y tools).
-- `agent.py` — núcleo compartido: `build_system` + `finalize`.
-- `clients.py` — cliente ollama (chat, streaming con tools, ventana de contexto) + corpus/RAG.
+- `agent.py` — núcleo compartido: `run_turn` (loop de un turno) + `build_system` + `finalize`.
+- `clients.py` — clientes de inferencia: ollama (chat, streaming con tools) + backend
+  OpenAI-compatible (llama.cpp, con tools) + corpus/RAG.
 - `tools.py` — tools locales: web, vault, filesystem, shell (con guardas), HTML, skills.
 - `memory.py` — memoria persistente sobre mcp-memory (auto-recall + auto-save).
 - `mcp_bridge.py` — conecta los servers de `mcp.json` y expone sus tools.
+- `prompts.py` + `prompts/` — prompts externalizados (soul, extracción de memoria, resumen…).
 - `skills.py` + `skills/` — procedimientos reutilizables (`use_skill`).
 - `store.py` — persistencia de conversaciones (SQLite).
 - `trace.py` — trazabilidad (JSONL) de cada turno.
 - `config.py` — endpoints y parámetros (todo override por env var).
+- `tests/` — suite de pytest (guardas de path, denylist de shell, store, MCP, compact…).
 
 ---
 

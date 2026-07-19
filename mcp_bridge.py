@@ -14,6 +14,8 @@ import re
 import threading
 from contextlib import AsyncExitStack
 
+import config
+
 log = logging.getLogger("localagent.mcp")
 
 CONFIG_PATH = os.getenv(
@@ -81,7 +83,7 @@ class MCPBridge:
                     self.tools[qname] = (sess, t.name)
                     self.specs.append({"type": "function", "function": {
                         "name": qname,
-                        "description": (t.description or "")[:900],
+                        "description": (t.description or "")[:config.MCP_TOOL_DESC_MAX],
                         "parameters": t.inputSchema or {"type": "object", "properties": {}},
                     }})
                 self.connected.append(name)

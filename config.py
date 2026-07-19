@@ -25,3 +25,7 @@ VISION_HINT = ("vl", "llava", "vision")
 
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "llama3.2")  # the UI auto-picks the first available if you don't have it
 DEFAULT_TOPK = int(os.getenv("RAG_TOPK", "6"))
+
+# Max chars per MCP tool description sent to the model. Lower it (e.g. 250) to shrink the
+# prompt when large MCPs (many tools) are active — faster prompt eval, slightly less guidance.
+MCP_TOOL_DESC_MAX = int(os.getenv("MCP_TOOL_DESC_MAX", "900"))

@@ -25,6 +25,7 @@ def web_search(query, max_results=5):
     and return a clear message if it fails (instead of breaking the chat).
     """
     import time
+
     from ddgs import DDGS
     last_err = None
     for attempt in range(3):

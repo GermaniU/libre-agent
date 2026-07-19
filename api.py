@@ -7,7 +7,6 @@ import json
 import logging
 import os
 import re
-from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,14 +53,14 @@ class ChatRequest(BaseModel):
     message: str
     model: str
     temperature: float = 0.4
-    top_p: Optional[float] = None
-    max_tokens: Optional[int] = None
-    num_ctx: Optional[int] = None
-    system: Optional[str] = None  # override of soul.md for this session
+    top_p: float | None = None
+    max_tokens: int | None = None
+    num_ctx: int | None = None
+    system: str | None = None  # override of soul.md for this session
     use_tools: bool = True
-    think: Optional[bool] = None
+    think: bool | None = None
     use_memory: bool = True
-    mcp_servers: List[str] = Field(default_factory=list)
+    mcp_servers: list[str] = Field(default_factory=list)
 
 
 class SaveSessionRequest(BaseModel):
@@ -94,7 +93,7 @@ def list_models():
     try:
         models = clients.list_local_models()
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Ollama no responde: {e}")
+        raise HTTPException(status_code=503, detail=f"Ollama no responde: {e}") from e
     chat_models = [m for m in models if m["kind"] in ("chat", "vision")]
     return {"models": chat_models, "default": config.DEFAULT_MODEL}
 
@@ -132,8 +131,8 @@ class McpAdd(BaseModel):
 
 
 class McpEdit(BaseModel):
-    target: Optional[str] = None
-    config: Optional[dict] = None
+    target: str | None = None
+    config: dict | None = None
 
 
 class McpImport(BaseModel):
@@ -310,7 +309,7 @@ def set_soul(req: SoulUpdate):
             f.write(req.content)
         return {"ok": True}
     except OSError as e:
-        raise HTTPException(status_code=500, detail=f"No se pudo guardar el soul: {e}")
+        raise HTTPException(status_code=500, detail=f"No se pudo guardar el soul: {e}") from e
 
 
 @app.get("/api/context-limit")
@@ -358,7 +357,7 @@ def compact(req: CompactRequest):
         raise
     except Exception as e:
         log.warning("could not compact session %r", req.session, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"No se pudo compactar la conversación: {e}")
+        raise HTTPException(status_code=500, detail=f"No se pudo compactar la conversación: {e}") from e
 
 
 # ---------------------------------------------------------------- chat streaming

@@ -6,12 +6,12 @@ maintainable: one place for a turn's logic, many frontends.
 """
 import os
 import time
+import trace
 
 import clients
 import memory
 import prompts
 import skills
-import trace
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 
