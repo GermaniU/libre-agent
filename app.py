@@ -76,20 +76,10 @@ st.markdown(_THEME_CSS, unsafe_allow_html=True)
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 
-FALLBACK_SOUL = (
-    "Sos un asistente con tools. Usá web_search/web_fetch para info externa, vault_search "
-    "para las notas del usuario y write_html si pide un documento. Respondé en español. "
-    "Atendé SOLO el último mensaje; nunca repitas búsquedas de temas anteriores."
-)
-
-
 @st.cache_data(ttl=30)
 def _soul():
-    try:
-        with open(os.path.join(_DIR, "soul.md")) as f:
-            return f.read()
-    except Exception:
-        return FALLBACK_SOUL
+    # single source of truth in prompts/ (cached briefly for Streamlit reruns)
+    return agent.load_soul()
 
 
 @st.cache_data(ttl=30)

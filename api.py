@@ -37,21 +37,11 @@ app.add_middleware(
 )
 
 
-def _soul():
-    """Carga soul.md con fallback idéntico al de app.py."""
-    try:
-        with open(os.path.join(_DIR, "soul.md"), encoding="utf-8") as f:
-            return f.read()
-    except Exception:
-        return (
-            "Sos un asistente con tools. Usá web_search/web_fetch para info externa, "
-            "vault_search para las notas del usuario y write_html si pide un documento. "
-            "Respondé en español. Atendé SOLO el último mensaje; nunca repitas búsquedas "
-            "de temas anteriores."
-        )
+# Soul path lives under prompts/ (single source of truth loaded via agent.load_soul).
+_SOUL_PATH = os.path.join(_DIR, "prompts", "soul.md")
 
 
-# ---------------------------------------------------------------- modelos
+# ---------------------------------------------------------------- models
 class ChatRequest(BaseModel):
     session: str
     message: str
@@ -242,18 +232,17 @@ def env_status():
 
 @app.get("/api/soul")
 def get_soul():
-    return {"content": _soul()}
+    return {"content": agent.load_soul()}
 
 
 @app.post("/api/soul")
 def set_soul(req: SoulUpdate):
     try:
-        path = os.path.join(_DIR, "soul.md")
-        with open(path, "w", encoding="utf-8") as f:
+        with open(_SOUL_PATH, "w", encoding="utf-8") as f:
             f.write(req.content)
         return {"ok": True}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"No se pudo guardar soul.md: {e}")
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=f"No se pudo guardar el soul: {e}")
 
 
 @app.get("/api/context-limit")
@@ -288,8 +277,8 @@ def chat(req: ChatRequest):
         # agregar mensaje del usuario
         sess["messages"].append({"role": "user", "content": req.message})
 
-        # armar system prompt + recall de memoria (el front puede pisar el soul)
-        soul = req.system.strip() if req.system and req.system.strip() else _soul()
+        # build system prompt + memory recall (the front can override the soul)
+        soul = req.system.strip() if req.system and req.system.strip() else agent.load_soul()
         system, recalled = agent.build_system(soul, req.message, req.use_memory)
         api_msgs = [{"role": "system", "content": system}]
         api_msgs += [{"role": m["role"], "content": m["content"]} for m in sess["messages"]]

@@ -41,11 +41,7 @@ state = {"model": config.DEFAULT_MODEL, "messages": [], "tokens": 0, "ctx": 0,
 
 
 def _soul():
-    try:
-        with open(os.path.join(DIR, "soul.md")) as f:
-            return f.read()
-    except Exception:
-        return "Sos un asistente con tools. Respondé en español."
+    return agent.load_soul()
 
 
 def send(chat, text):

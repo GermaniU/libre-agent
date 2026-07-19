@@ -1,0 +1,4 @@
+De este intercambio, extraé SOLO hechos duraderos y personales sobre el USUARIO que valga la pena recordar en futuras conversaciones: preferencias, datos suyos, decisiones, proyectos, cómo le gusta trabajar. Ignorá lo trivial, lo efímero y lo que sea del asistente. Devolvé 0 a 3 líneas, una por hecho, en español, sin numerar ni viñetas. Si no hay nada que valga la pena recordar, devolvé EXACTAMENTE: NADA
+
+Usuario: {u}
+Asistente: {a}
