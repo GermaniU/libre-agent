@@ -1,7 +1,7 @@
-"""LocalAgent — espacio de trabajo/chat con modelos locales, tools y RAG sobre tu vault.
+"""LocalAgent — workspace/chat with local models, tools and RAG over your vault.
 
-Todo corre en tu LAN: ollama + corpus/Qdrant (opcional). Cero tokens de nube.
-El modelo decide solo cuándo usar web, vault o generar HTML (ver soul.md).
+Everything runs on your LAN: ollama + corpus/Qdrant (optional). Zero cloud tokens.
+The model decides on its own when to use web, vault or generate HTML (see soul.md).
 """
 import json
 import os
@@ -21,10 +21,10 @@ import trace
 
 st.set_page_config(page_title="LocalAgent", page_icon="🧠", layout="wide")
 
-# ------------------------------------------------------------- tema (rediseño)
-# Capa visual sobre Streamlit: IBM Plex + acento terracota, burbujas de usuario,
-# code blocks y detalles del mockup. Los selectores de Streamlit pueden cambiar
-# entre versiones; si alguno no matchea, degrada sin romper la app.
+# ------------------------------------------------------------- theme (redesign)
+# Visual layer on top of Streamlit: IBM Plex + terracotta accent, user bubbles,
+# code blocks and mockup details. Streamlit selectors can change between
+# versions; if any doesn't match, it degrades without breaking the app.
 _THEME_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
@@ -126,12 +126,12 @@ def _resources():
         st.caption("GPU no disponible (nvidia-smi falló)")
 
 
-# ------------------------------------------------------------- estado
+# ------------------------------------------------------------- state
 def _new_session():
     return {"messages": [], "tools": {}, "mem": {}, "tokens": 0, "ctx": 0}
 
 if "sessions" not in st.session_state:
-    # cargar de SQLite (sobreviven reinicios); si no hay nada, arrancar un chat vacío
+    # load from SQLite (survives restarts); if empty, start with a blank chat
     saved = store.load_sessions()
     st.session_state.sessions = saved or {"Chat 1": _new_session()}
     st.session_state.current = next(iter(st.session_state.sessions))
@@ -190,7 +190,7 @@ with st.sidebar:
         help="Recuerda cosas tuyas entre sesiones (mcp-memory, namespace 'localagent'): "
              "recall antes de responder + guardado automático de hechos duraderos.")
 
-    # todo lo fino vive acá; el día a día no necesita tocar nada
+    # all the fine-tuning lives here; day-to-day usage doesn't need to touch anything
     bridge = None
     with st.expander("⚙️ Avanzado"):
         temp = st.slider("Temperatura", 0.0, 1.2, 0.4, 0.1)
@@ -214,7 +214,7 @@ with st.sidebar:
     _resources()
 
     st.divider()
-    # ☕ Donaciones (opcional): reemplazá el usuario de PayPal. Software libre; esto es un "si te sirve".
+    # ☕ Donations (optional): replace the PayPal username. Free software; this is a "if it helps you".
     st.link_button("☕ Invitame un café", "https://paypal.me/TU_USUARIO", use_container_width=True)
 
     with st.expander("🔍 Trazas recientes"):
@@ -323,7 +323,7 @@ if prompt:
         sess.setdefault("tools", {})[str(idx)] = calls_log
     if meta:
         sess.setdefault("meta", {})[str(idx)] = meta
-    # núcleo compartido: auto-save de memoria + traza (idéntico a lo que hace el bot)
+    # shared core: memory auto-save + trace (identical to what the bot does)
     secs = (meta or {}).get("secs", 0)
     saved_facts, _ = agent.finalize("web", prompt, reply, calls_log, usage, secs, model,
                                     use_memory=use_memory and saved_ok, recalled=recalled,
@@ -331,5 +331,5 @@ if prompt:
     if saved_facts:
         sess.setdefault("mem", {})[str(idx)] = saved_facts
         st.caption(f"💾 {len(saved_facts)} recuerdo(s) guardado(s) en memoria")
-    store.save_session(st.session_state.current, sess)   # persiste el intercambio
+    store.save_session(st.session_state.current, sess)   # persist the exchange
     _draw_ctx()

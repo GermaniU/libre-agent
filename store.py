@@ -1,7 +1,7 @@
-"""Persistencia de conversaciones en SQLite (sobreviven reinicios de la app).
+"""Conversation persistence in SQLite (survives app restarts).
 
-Cada 'espacio' (sesión de chat) se guarda como un blob JSON keyed por nombre.
-Liviano a propósito: abrir/cerrar conexión por llamada + lock para los reruns de Streamlit.
+Each 'space' (chat session) is stored as a JSON blob keyed by name.
+Deliberately lightweight: open/close connection per call + lock for Streamlit reruns.
 """
 import json
 import os
@@ -21,7 +21,7 @@ def _conn():
 
 
 def load_sessions():
-    """Devuelve {nombre: session_dict} de todas las sesiones guardadas (más viejas primero)."""
+    """Returns {name: session_dict} for all saved sessions (oldest first)."""
     try:
         with _lock, _conn() as c:
             rows = c.execute("SELECT name, data FROM sessions ORDER BY updated").fetchall()
@@ -37,7 +37,7 @@ def load_sessions():
 
 
 def save_session(name, session):
-    """Persiste (o actualiza) una sesión. Best-effort: no rompe el chat si falla."""
+    """Persists (or updates) a session. Best-effort: won't break the chat if it fails."""
     try:
         with _lock, _conn() as c:
             c.execute("INSERT OR REPLACE INTO sessions (name, data, updated) VALUES (?,?,?)",
@@ -57,7 +57,7 @@ def delete_session(name):
 
 
 def rename_session(old, new):
-    """Devuelve False si el nombre destino ya existe o falla el update (no pisa sesiones)."""
+    """Returns False if the target name already exists or the update fails (won't overwrite sessions)."""
     try:
         with _lock, _conn() as c:
             if c.execute("SELECT 1 FROM sessions WHERE name=?", (new,)).fetchone():

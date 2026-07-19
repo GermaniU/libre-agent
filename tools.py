@@ -1,6 +1,6 @@
-"""Tools locales que el modelo puede ejecutar vía tool calling de ollama.
+"""Local tools that the model can execute via ollama's tool calling.
 
-Cada tool devuelve SIEMPRE un string (lo que el modelo ve como resultado).
+Each tool ALWAYS returns a string (what the model sees as the result).
 """
 import json
 import re
@@ -15,10 +15,10 @@ UA = {"User-Agent": "Mozilla/5.0 (LocalAgent; +local)"}
 
 # ---------------------------------------------------------------- impls
 def web_search(query, max_results=5):
-    """Busca en DuckDuckGo y devuelve título, URL y snippet de cada hit.
+    """Search DuckDuckGo and return title, URL and snippet of each hit.
 
-    DuckDuckGo suele rate-limitear el scraping, así que reintentamos con backoff
-    y devolvemos un mensaje claro si falla (en vez de romper el chat).
+    DuckDuckGo usually rate-limits scraping, so we retry with backoff
+    and return a clear message if it fails (instead of breaking the chat).
     """
     import time
     from ddgs import DDGS
@@ -40,7 +40,7 @@ def web_search(query, max_results=5):
 
 
 def web_fetch(url, max_chars=5000):
-    """Descarga una página y devuelve su texto plano (sin HTML)."""
+    """Download a page and return its plain text (without HTML)."""
     from bs4 import BeautifulSoup
     r = requests.get(url, headers=UA, timeout=20)
     r.raise_for_status()
@@ -52,7 +52,7 @@ def web_fetch(url, max_chars=5000):
 
 
 def vault_pull():
-    """git pull del vault físico (desde WSL, que es el lado que mergea bien)."""
+    """git pull of the physical vault (from WSL, which is the side that merges well)."""
     import subprocess
     r = subprocess.run(["git", "-C", config.VAULT_DIR, "pull", "--no-rebase"],
                        capture_output=True, text=True, timeout=120)
@@ -61,11 +61,11 @@ def vault_pull():
 
 
 def vault_recent(days=7):
-    """Qué se trabajó últimamente: notas del vault modificadas en los últimos N días.
+    """What was worked on recently: vault notes modified in the last N days.
 
-    Usa git (log + status) en vez de os.walk sobre /mnt/c: el FS de Windows desde WSL
-    es lentísimo con 1000+ archivos; git resuelve lo mismo al instante y capta tanto
-    commits recientes como cambios sin commitear.
+    Uses git (log + status) instead of os.walk over /mnt/c: the Windows FS from WSL
+    is extremely slow with 1000+ files; git resolves the same thing instantly and captures both
+    recent commits and uncommitted changes.
     """
     import datetime
     import os
@@ -91,7 +91,7 @@ def vault_recent(days=7):
                 recent.add(p)
     except Exception as e:
         return f"vault_recent: no pude consultar git ({e}). ¿El vault es un repo git en {root}?"
-    # las daily notes van por nombre de archivo (fecha), que es más confiable que mtime
+    # daily notes go by filename (date), which is more reliable than mtime
     today = datetime.date.today()
     dailies = []
     for i in range(days):
@@ -108,7 +108,7 @@ def vault_recent(days=7):
 
 
 def vault_read(path):
-    """Lee una nota del vault físico por ruta relativa (ej: 'Daily Notes/2026-07-10.md')."""
+    """Read a note from the physical vault by relative path (e.g.: 'Daily Notes/2026-07-10.md')."""
     import os
     p = os.path.realpath(os.path.join(config.VAULT_DIR, path))
     if not p.startswith(os.path.realpath(config.VAULT_DIR)):
@@ -120,7 +120,7 @@ def vault_read(path):
 
 
 def write_html(filename, content, title=""):
-    """Guarda una página HTML en static/ y devuelve las URLs para abrirla."""
+    """Save an HTML page in static/ and return the URLs to open it."""
     import os
     import socket
     name = re.sub(r"[^a-zA-Z0-9_-]", "-", os.path.splitext(filename)[0]).strip("-") or "pagina"
@@ -143,7 +143,7 @@ def write_html(filename, content, title=""):
 
 
 def vault_search(query, limit=6):
-    """Busca pasajes en el vault (corpus/Qdrant) y los devuelve citados."""
+    """Search passages in the vault (corpus/Qdrant) and return them cited."""
     hits = clients.corpus_search(query, limit=int(limit))
     if not hits:
         return "Sin pasajes relevantes en el vault."
@@ -151,7 +151,7 @@ def vault_search(query, limit=6):
 
 
 def use_skill(name):
-    """Carga el procedimiento de una skill (por nombre) para seguirlo paso a paso."""
+    """Load a skill's procedure (by name) to follow it step by step."""
     import skills
     body = skills.load_skill(name)
     if not body:
@@ -162,9 +162,9 @@ def use_skill(name):
 
 # ---------------------------------------------------------------- filesystem (workspace)
 def _in_workspace(path):
-    """Resuelve `path` dentro de WORKSPACE_DIR y valida que no se escape (anti traversal).
+    """Resolve `path` inside WORKSPACE_DIR and validate that it does not escape (anti traversal).
 
-    Devuelve (ruta_absoluta, None) si es válida, o (None, mensaje_error) si no.
+    Returns (absolute_path, None) if valid, or (None, error_message) if not.
     """
     import os
     root = os.path.realpath(config.WORKSPACE_DIR)
@@ -175,7 +175,7 @@ def _in_workspace(path):
 
 
 def make_dir(path):
-    """Crea una carpeta (y sus padres) dentro del workspace (C:\\Sites)."""
+    """Create a folder (and its parents) inside the workspace (C:\\Sites)."""
     import os
     full, err = _in_workspace(path)
     if err:
@@ -185,7 +185,7 @@ def make_dir(path):
 
 
 def write_file(path, content):
-    """Escribe un archivo de texto dentro del workspace, creando carpetas padre si faltan."""
+    """Write a text file inside the workspace, creating parent folders if missing."""
     import os
     full, err = _in_workspace(path)
     if err:
@@ -197,7 +197,7 @@ def write_file(path, content):
 
 
 def list_dir(path="."):
-    """Lista el contenido de una carpeta del workspace (para ver qué hay antes de escribir)."""
+    """List the contents of a workspace folder (to see what's there before writing)."""
     import os
     full, err = _in_workspace(path)
     if err:
@@ -211,25 +211,25 @@ def list_dir(path="."):
                      for e in entries)
 
 
-# patrones claramente destructivos → se bloquean siempre (defensa, no exhaustiva)
+# clearly destructive patterns → always blocked (defense, not exhaustive)
 _BLOCKED_CMD = re.compile(
-    r"\brm\s+-rf?\s+(/|~|\$HOME|\*)"          # rm -rf de raíz/home/todo
-    r"|\bmkfs|\bdd\s+if=|\bshred\b"            # formateo / borrado de disco
-    r"|>\s*/dev/(sd|nvme|null/)"               # escribir a dispositivos
+    r"\brm\s+-rf?\s+(/|~|\$HOME|\*)"          # rm -rf of root/home/everything
+    r"|\bmkfs|\bdd\s+if=|\bshred\b"            # disk formatting / wiping
+    r"|>\s*/dev/(sd|nvme|null/)"               # writing to devices
     r"|:\(\)\s*\{.*\};:"                       # fork bomb
-    r"|\b(shutdown|reboot|halt|poweroff)\b"    # apagar la máquina
-    r"|\bchmod\s+-R\s+777\s+/"                 # abrir permisos de raíz
-    r"|\b(curl|wget)\b[^|]*\|\s*(sudo\s+)?(sh|bash|zsh)\b"  # pipe a shell
+    r"|\b(shutdown|reboot|halt|poweroff)\b"    # power off the machine
+    r"|\bchmod\s+-R\s+777\s+/"                 # open root permissions
+    r"|\b(curl|wget)\b[^|]*\|\s*(sudo\s+)?(sh|bash|zsh)\b"  # pipe to shell
     r"|\bsudo\s+rm\b",
     re.I,
 )
 
 
 def run_cmd(command, timeout=60):
-    """Ejecuta un comando de shell dentro del workspace (C:\\Sites) y devuelve su salida.
+    """Execute a shell command inside the workspace (C:\\Sites) and return its output.
 
-    Guardas: bloquea patrones claramente destructivos, corre confinado a WORKSPACE_DIR,
-    y corta a los `timeout` segundos. Pensada para tareas de dev (pip, python, git, ls…).
+    Safeguards: blocks clearly destructive patterns, runs confined to WORKSPACE_DIR,
+    and cuts off after `timeout` seconds. Intended for dev tasks (pip, python, git, ls…).
     """
     import subprocess
     cmd = (command or "").strip()
@@ -364,7 +364,7 @@ _IMPLS = {"web_search": web_search, "web_fetch": web_fetch,
 
 
 def execute(name, args):
-    """Ejecuta una tool por nombre; el error va como texto para que el modelo se recupere."""
+    """Execute a tool by name; the error goes as text so the model can recover."""
     fn = _IMPLS.get(name)
     if not fn:
         return f"Error: tool desconocida '{name}'."

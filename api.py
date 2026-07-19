@@ -1,7 +1,7 @@
-"""Backend puente para LocalAgent: expone el loop del agente vía HTTP.
+"""Bridge backend for LocalAgent: exposes the agent loop over HTTP.
 
-No reemplaza la lógica del agente: delega todo en agent.py, clients.py, store.py,
-memory.py, trace.py, etc. Sólo añade una capa HTTP + un frontend estático.
+Does not replace the agent logic: it delegates everything to agent.py, clients.py,
+store.py, memory.py, trace.py, etc. It only adds an HTTP layer + a static frontend.
 """
 import json
 import os
@@ -27,8 +27,8 @@ _STATIC_DIR = os.path.join(_DIR, "static")
 
 app = FastAPI(title="LocalAgent API", version="0.1.0")
 
-# El frontend se sirve desde el mismo origen; CORS solo para orígenes locales
-# (con "*" cualquier página abierta en el navegador podría leer /api/sessions).
+# The frontend is served from the same origin; CORS only for local origins
+# (with "*" any page open in the browser could read /api/sessions).
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?",
@@ -50,7 +50,7 @@ class ChatRequest(BaseModel):
     top_p: Optional[float] = None
     max_tokens: Optional[int] = None
     num_ctx: Optional[int] = None
-    system: Optional[str] = None  # override del soul.md para esta sesión
+    system: Optional[str] = None  # override of soul.md for this session
     use_tools: bool = True
     think: Optional[bool] = None
     use_memory: bool = True
@@ -77,7 +77,7 @@ def health():
 
 @app.get("/api/models")
 def list_models():
-    """Modelos de chat/visión disponibles en Ollama, con indicador de VRAM."""
+    """Chat/vision models available in Ollama, with a VRAM indicator."""
     try:
         models = clients.list_local_models()
     except Exception as e:
@@ -115,7 +115,7 @@ def rename_session(old: str, req: RenameRequest):
 
 class McpAdd(BaseModel):
     name: str
-    target: str  # URL http(s) -> server http; cualquier otra cosa -> comando stdio
+    target: str  # http(s) URL -> http server; anything else -> stdio command
 
 
 class McpEdit(BaseModel):
@@ -138,7 +138,7 @@ def _mcp_save(cfg):
 
 
 def _mcp_server_from_target(target):
-    """Traduce un 'target' (URL http o 'comando args…') a un dict de config MCP."""
+    """Translates a 'target' (http URL or 'command args…') into an MCP config dict."""
     if re.match(r"^https?://", target):
         return {"type": "http", "url": target}
     parts = target.split()
@@ -146,14 +146,14 @@ def _mcp_server_from_target(target):
 
 
 def _mcp_target_of(s):
-    """Deriva el 'target' legible de un dict de config (para mostrar/editar)."""
+    """Derives the readable 'target' from a config dict (for display/editing)."""
     if s.get("type") == "http" or "url" in s:
         return s.get("url", "")
     return " ".join([s.get("command", "")] + s.get("args", [])).strip()
 
 
 def _mcp_view(cfg):
-    """Lista pública de servers: nombre + tipo + target + env (sin valores de env)."""
+    """Public list of servers: name + type + target + env (without env values)."""
     out = []
     for name, s in cfg["mcpServers"].items():
         is_http = s.get("type") == "http" or "url" in s
@@ -161,7 +161,7 @@ def _mcp_view(cfg):
             "name": name,
             "type": "http" if is_http else "stdio",
             "target": _mcp_target_of(s),
-            "env_keys": sorted((s.get("env") or {}).keys()),  # solo claves, nunca valores
+            "env_keys": sorted((s.get("env") or {}).keys()),  # keys only, never values
         })
     return out
 
@@ -196,7 +196,7 @@ def edit_mcp(name: str, req: McpEdit):
     cfg = _mcp_cfg()
     if name not in cfg["mcpServers"]:
         raise HTTPException(status_code=404, detail="No existe ese MCP")
-    # preservar env existente (p.ej. tokens) al cambiar solo la URL/comando
+    # preserve existing env (e.g. tokens) when changing only the URL/command
     prev_env = cfg["mcpServers"][name].get("env")
     new = _mcp_server_from_target(target)
     if prev_env:
@@ -218,13 +218,13 @@ def delete_mcp(name: str):
 
 @app.get("/api/env")
 def env_status():
-    """Rutas/endpoints locales para el panel de config. Sin chequeos de red (no bloquea)."""
+    """Local paths/endpoints for the config panel. No network checks (non-blocking)."""
     tg_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
     return {
         "vault_dir": config.VAULT_DIR,
         "workspace_dir": config.WORKSPACE_DIR,
         "ollama_url": config.OLLAMA_URL,
-        # Telegram: solo lectura y token enmascarado — nunca sale entero al front
+        # Telegram: read-only and masked token — never leaves whole to the front
         "tg_token": (tg_token[:6] + "…" + tg_token[-4:]) if len(tg_token) > 12 else ("configurado" if tg_token else ""),
         "tg_chats": os.getenv("TELEGRAM_ALLOWED_USER", ""),
     }
@@ -253,9 +253,9 @@ def context_limit(model: str):
 # ---------------------------------------------------------------- chat streaming
 @app.post("/api/chat")
 def chat(req: ChatRequest):
-    """Orquesta un turno completo del agente en streaming (NDJSON).
+    """Orchestrates a full agent turn in streaming (NDJSON).
 
-    Eventos emitidos:
+    Emitted events:
       {"type":"recall","count":N}
       {"type":"token","token":"..."}
       {"type":"tool","name":"...","args":{...}}
@@ -274,7 +274,7 @@ def chat(req: ChatRequest):
         sess.setdefault("tokens", 0)
         sess.setdefault("ctx", 0)
 
-        # agregar mensaje del usuario
+        # add the user message
         sess["messages"].append({"role": "user", "content": req.message})
 
         # build system prompt + memory recall (the front can override the soul)
@@ -285,7 +285,7 @@ def chat(req: ChatRequest):
 
         yield _event("recall", {"count": len(recalled), "facts": recalled})
 
-        # conectar MCPs seleccionados (igual que el multiselect de app.py)
+        # connect the selected MCPs (same as the multiselect in app.py)
         bridge = None
         if req.mcp_servers:
             try:
@@ -346,7 +346,7 @@ def chat(req: ChatRequest):
         if calls_log:
             sess.setdefault("tools", {})[str(idx)] = calls_log
 
-        # post-turno compartido: memoria + traza
+        # shared post-turn: memory + trace
         try:
             secs = (meta or {}).get("secs", 0)
             saved_facts, _ = agent.finalize(
@@ -374,14 +374,14 @@ def chat(req: ChatRequest):
     return StreamingResponse(event_stream(), media_type="application/x-ndjson")
 
 
-# ---------------------------------------------------------------- archivos estáticos (deben ir al final para no sombrear /api/*)
+# ---------------------------------------------------------------- static files (must go last so they don't shadow /api/*)
 @app.get("/", include_in_schema=False)
 def root():
     return FileResponse(os.path.join(_WEB_DIR, "index.html"))
 
 
 def _safe_file(base: str, path: str):
-    """Resuelve path dentro de base; None si escapa del directorio (../ etc.)."""
+    """Resolves path within base; None if it escapes the directory (../ etc.)."""
     base = os.path.realpath(base)
     p = os.path.realpath(os.path.join(base, path))
     if p != base and not p.startswith(base + os.sep):
@@ -391,12 +391,12 @@ def _safe_file(base: str, path: str):
 
 @app.get("/{path:path}", include_in_schema=False)
 def static_files(path: str):
-    """Sirve la SPA y la carpeta static/ de write_html."""
+    """Serves the SPA and the static/ folder from write_html."""
     for base in (_WEB_DIR, _STATIC_DIR):
         p = _safe_file(base, path)
         if p:
             return FileResponse(p)
-    # Fallback a index.html para rutas de la SPA
+    # Fallback to index.html for SPA routes
     if os.path.isfile(os.path.join(_WEB_DIR, "index.html")):
         return FileResponse(os.path.join(_WEB_DIR, "index.html"))
     raise HTTPException(status_code=404, detail="Not found")

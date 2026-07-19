@@ -1,6 +1,6 @@
-/* LocalAgent SPA — frontend vanilla que replica design/redesign.dc.html y consume /api/. */
+/* LocalAgent SPA — vanilla frontend that replicates design/redesign.dc.html and consumes /api/. */
 
-// ----------------------------------------------------------------- estado
+// ----------------------------------------------------------------- state
 const state = {
   theme: localStorage.getItem('la-theme') || 'dark',
   collapsedSb: localStorage.getItem('la-collapsed') === 'true',
@@ -43,11 +43,11 @@ const state = {
   mcpNew: { name: '', target: '' },
   mcpError: null,
   mcpConfigs: [],      // [{name, type, target, env_keys}]
-  mcpEditing: null,    // nombre del server en edición
+  mcpEditing: null,    // name of the server being edited
   mcpEditVal: '',
 };
 
-// ----------------------------------------------------------------- utilidades
+// ----------------------------------------------------------------- utilities
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -117,7 +117,7 @@ async function renameSession(oldName, newName) {
   await apiPost(`/api/sessions/${encodeURIComponent(oldName)}/rename`, { new: newName });
 }
 
-// ----------------------------------------------------------------- markdown ligero
+// ----------------------------------------------------------------- lightweight markdown
 function inlineMd(s) {
   return s
     .replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -126,11 +126,11 @@ function inlineMd(s) {
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) =>
       /^(https?:|mailto:|\/|#)/i.test(url.trim())
         ? `<a href="${url}" target="_blank" rel="noopener">${label}</a>`
-        : `${label} (${url})`); // esquemas tipo javascript: no se convierten en link
+        : `${label} (${url})`); // schemes like javascript: are not turned into a link
 }
 
 function mdToHtml(src) {
-  const rawLines = String(src ?? '').split('\n'); // esc() no altera saltos de línea: índices alineados
+  const rawLines = String(src ?? '').split('\n'); // esc() does not alter line breaks: indices stay aligned
   let text = esc(src);
   const lines = text.split('\n');
   const out = [];
@@ -216,11 +216,11 @@ function renderTable(rows) {
   return `<div style="overflow-x:auto;margin:0 0 16px"><table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></div>`;
 }
 
-// ----------------------------------------------------------------- render principal
+// ----------------------------------------------------------------- main render
 function render() {
   const root = $('#root');
   root.className = `lc ${state.theme}`;
-  // el tema también va en <html>: body y scrollbars están fuera de #root
+  // the theme also goes on <html>: body and scrollbars are outside #root
   document.documentElement.className = state.theme === 'light' ? 'light' : '';
   const act = state.sessions[state.activeId] || { messages: [], tools: {}, mem: {}, tokens: 0, ctx: 0 };
   root.innerHTML = `
@@ -853,11 +853,11 @@ function renderCfgTg() {
   </div>`;
 }
 
-// ----------------------------------------------------------------- eventos
+// ----------------------------------------------------------------- events
 function attachEvents() {
   const root = $('#root');
 
-  // clicks con data-action
+  // clicks with data-action
   root.addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
@@ -1020,7 +1020,7 @@ function attachEvents() {
 
 }
 
-// ----------------------------------------------------------------- acciones
+// ----------------------------------------------------------------- actions
 function selectSpace(name) {
   state.activeId = name;
   state.menuId = null;
@@ -1058,7 +1058,7 @@ async function commitRename(oldName) {
   if (!newName || newName === oldName) { state.renamingId = null; render(); return; }
   state.renamingId = null;
   try {
-    // primero el backend: si el nombre ya existe (409) no tocamos el estado local
+    // backend first: if the name already exists (409) we don't touch local state
     await renameSession(oldName, newName);
     const sess = state.sessions[oldName];
     delete state.sessions[oldName];
@@ -1167,7 +1167,7 @@ async function copyText(idx) {
 function editMessage(idx) {
   const sess = state.sessions[state.activeId];
   if (!sess?.messages?.[idx] || sess.messages[idx].role !== 'assistant') return;
-  // reeditar = volver a ese punto: el user anterior va al draft y se recorta la historia
+  // re-edit = go back to that point: the previous user message goes to the draft and history is trimmed
   const prevUser = sess.messages[idx - 1];
   state.draft = prevUser?.role === 'user' ? prevUser.content : sess.messages[idx].content;
   const cut = prevUser?.role === 'user' ? idx - 1 : idx;
@@ -1248,7 +1248,7 @@ async function sendMessage() {
   sess.messages.push({ role: 'user', content: text });
   sess.updated = Date.now() / 1000;
 
-  // placeholder del mensaje del asistente
+  // assistant message placeholder
   const aiIdx = sess.messages.length;
   sess.messages.push({ role: 'assistant', content: '', think: '', streaming: true, model: state.modelId });
   render();
@@ -1286,7 +1286,7 @@ async function sendMessage() {
       if (done) break;
       buf += decoder.decode(value, { stream: true });
       const lines = buf.split('\n');
-      buf = lines.pop(); // último incompleto queda en buffer
+      buf = lines.pop(); // last incomplete one stays in the buffer
       for (const line of lines) {
         if (!line.trim()) continue;
         try {
@@ -1297,7 +1297,7 @@ async function sendMessage() {
         }
       }
     }
-    // línea final
+    // final line
     if (buf.trim()) {
       try { handleEvent(JSON.parse(buf), sess, aiIdx, name); } catch (e) {}
     }
@@ -1330,7 +1330,7 @@ function handleEvent(ev, sess, aiIdx, name) {
   if (ev.type === 'token') {
     m.content += ev.token || '';
   } else if (ev.type === 'tool') {
-    // guardamos las tool calls para mostrar al final
+    // we store the tool calls to show at the end
     sess.tools = sess.tools || {};
     sess.tools[aiIdx] = sess.tools[aiIdx] || [];
     sess.tools[aiIdx].push({ tool: ev.name, args: ev.args, result: '' });
@@ -1338,7 +1338,7 @@ function handleEvent(ev, sess, aiIdx, name) {
     if (ev.count > 0) m.recall = ev.count;
   } else if (ev.type === 'done') {
     m.content = ev.reply;
-    m.think = ''; // ollama no separa thinking en este canal
+    m.think = ''; // ollama does not separate thinking in this channel
     m.streaming = false;
     m.meta = ev.meta;
     if (ev.usage) {
@@ -1352,7 +1352,7 @@ function handleEvent(ev, sess, aiIdx, name) {
   } else if (ev.type === 'warning') {
     console.warn(ev.text);
   }
-  // render parcial con throttling
+  // partial render with throttling
   if (!state._raf) {
     state._raf = requestAnimationFrame(() => {
       state._raf = null;
@@ -1367,14 +1367,14 @@ function stopMessage() {
 
 // ----------------------------------------------------------------- init
 async function init() {
-  attachEvents(); // una sola vez: #root persiste y los listeners se acumulaban en cada render
+  attachEvents(); // only once: #root persists and the listeners were accumulating on each render
   document.addEventListener('click', () => {
     if (state.modelMenu || state.moreMenu || state.menuId) {
       state.modelMenu = false; state.moreMenu = false; state.menuId = null; render();
     }
   });
   try {
-    // crítico para pintar: sesiones + modelos. Se renderiza apenas llegan estos dos.
+    // critical to paint: sessions + models. It renders as soon as these two arrive.
     const [sessions, models] = await Promise.all([
       apiGet('/api/sessions'),
       apiGet('/api/models'),
@@ -1392,9 +1392,9 @@ async function init() {
               || state.models.find(m => m.name === models.default)
               || state.models[0];
     state.modelId = pick?.name;
-    if (!state.activeId) await newChat(); else render(); // UI visible ya, sin esperar lo demás
+    if (!state.activeId) await newChat(); else render(); // UI already visible, without waiting for the rest
 
-    // no-crítico: env + mcps + soul llegan después y re-renderizan sin bloquear el arranque
+    // non-critical: env + mcps + soul arrive later and re-render without blocking startup
     const [env, mcps, soul] = await Promise.all([
       apiGet('/api/env').catch(() => ({})),
       apiGet('/api/mcps').catch(() => ({ servers: [] })),
@@ -1409,9 +1409,9 @@ async function init() {
     };
     state.mcpServers = mcps.servers || [];
     state.mcpConfigs = mcps.configs || [];
-    // sin preferencia guardada: los MCPs declarados en mcp.json arrancan activados
+    // no saved preference: the MCPs declared in mcp.json start enabled
     if (localStorage.getItem('la-mcps2') === null) state.selectedMcps = [...state.mcpServers];
-    // limpiar selecciones guardadas de servers que ya no existen en mcp.json
+    // clean saved selections of servers that no longer exist in mcp.json
     state.selectedMcps = state.selectedMcps.filter(n => state.mcpServers.includes(n));
     localStorage.setItem('la-mcps2', JSON.stringify(state.selectedMcps));
     state.sysPrompt = soul.content;

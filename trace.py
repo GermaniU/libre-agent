@@ -1,7 +1,7 @@
-"""Trazabilidad: log estructurado (JSONL) de cada turno del agente, para depurar y mejorar.
+"""Traceability: structured log (JSONL) of every agent turn, for debugging and improving.
 
-Un evento por línea: qué preguntó el usuario, qué recordó, qué tools disparó (args + resultado),
-tokens, tiempo y errores. Pensado para `tail -f`, `grep`, o el visor del sidebar.
+One event per line: what the user asked, what it recalled, which tools it fired (args + result),
+tokens, time and errors. Meant for `tail -f`, `grep`, or the sidebar viewer.
 """
 import datetime
 import json
@@ -13,7 +13,7 @@ _lock = threading.Lock()
 
 
 def log(event, **fields):
-    """Agrega un evento al trace (best-effort, nunca rompe el chat)."""
+    """Appends an event to the trace (best-effort, never breaks the chat)."""
     rec = {"ts": datetime.datetime.now().isoformat(timespec="seconds"), "event": event}
     rec.update(fields)
     try:
@@ -24,7 +24,7 @@ def log(event, **fields):
 
 
 def recent(n=10):
-    """Últimos n eventos (lista de dicts, del más viejo al más nuevo)."""
+    """Last n events (list of dicts, oldest to newest)."""
     try:
         with _lock, open(LOG, encoding="utf-8") as f:
             lines = f.readlines()[-n:]

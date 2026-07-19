@@ -1,10 +1,10 @@
-"""Puente MCP: conecta los servers del mcp.json del proyecto y expone sus tools al modelo local.
+"""MCP bridge: connects the servers from the project's mcp.json and exposes their tools to the local model.
 
-Por defecto NO hay ningún MCP: LocalAgent solo usa los que declares en su propio
-mcp.json (mismo formato {"mcpServers": {...}} que Claude). Override con MCP_CONFIG.
+By default there is NO MCP: LocalAgent only uses the ones you declare in its own
+mcp.json (same {"mcpServers": {...}} format as Claude). Override with MCP_CONFIG.
 
-Las conexiones viven en un thread propio con su event loop (streamlit es sync).
-Cada tool queda namespaceada como  <server>__<tool>  para no chocar entre servers.
+Connections live in their own thread with its event loop (streamlit is sync).
+Each tool is namespaced as  <server>__<tool>  to avoid clashing between servers.
 """
 import asyncio
 import json
@@ -20,7 +20,7 @@ CONFIG_PATH = os.getenv(
 
 
 def list_configured_servers():
-    """Nombres de MCPs registrados en mcp.json (sin conectar). Sin archivo = ninguno."""
+    """Names of MCPs registered in mcp.json (without connecting). No file = none."""
     try:
         with open(CONFIG_PATH) as f:
             return sorted(json.load(f).get("mcpServers", {}).keys())
@@ -33,15 +33,15 @@ def _safe(name):
 
 
 class MCPBridge:
-    """Conecta un set de servers MCP y ofrece .specs (formato ollama) y .call()."""
+    """Connects a set of MCP servers and offers .specs (ollama format) and .call()."""
 
     def __init__(self, servers, connect_timeout=45):
         self._loop = asyncio.new_event_loop()
         threading.Thread(target=self._loop.run_forever, daemon=True).start()
         self._stack = None
-        self.tools = {}      # "server__tool" -> (session, tool_real)
-        self.specs = []      # specs formato ollama/openai
-        self.errors = {}     # server -> error de conexión
+        self.tools = {}      # "server__tool" -> (session, real_tool)
+        self.specs = []      # specs in ollama/openai format
+        self.errors = {}     # server -> connection error
         self.connected = []  # servers OK
         self._run(self._connect(servers), timeout=connect_timeout * max(1, len(servers)))
 
@@ -59,7 +59,7 @@ class MCPBridge:
         for name in servers:
             s = cfg.get(name)
             if not s:
-                self.errors[name] = "no está en ~/.claude.json"
+                self.errors[name] = "no está en mcp.json"
                 continue
             try:
                 if s.get("type") == "http" or "url" in s:
@@ -85,7 +85,7 @@ class MCPBridge:
                 self.errors[name] = f"{type(e).__name__}: {e}"
 
     def close(self):
-        """Cierra sesiones y subprocesos MCP (best-effort)."""
+        """Close MCP sessions and subprocesses (best-effort)."""
         try:
             self._run(self._stack.aclose(), timeout=15)
         except Exception:

@@ -1,8 +1,8 @@
-"""Skills — procedimientos reutilizables que el agente invoca cuando aplica.
+"""Skills — reusable procedures the agent invokes when applicable.
 
-Cada skill es un .md en skills/ con frontmatter (name, description) + el procedimiento.
-El catálogo (name+description) va al system prompt; el modelo llama use_skill("nombre")
-para cargar el paso a paso y seguirlo. Estilo Claude Code, pero liviano.
+Each skill is a .md in skills/ with frontmatter (name, description) + the procedure.
+The catalog (name+description) goes into the system prompt; the model calls use_skill("name")
+to load the step-by-step and follow it. Claude Code style, but lightweight.
 """
 import os
 import re
@@ -13,7 +13,7 @@ _FM = re.compile(r"^---\s*\n(.*?)\n---\s*\n(.*)$", re.S)
 
 
 def _parse(text):
-    """Devuelve (name, description, body) de un .md con frontmatter opcional."""
+    """Returns (name, description, body) of a .md with optional frontmatter."""
     name = desc = None
     body = text
     m = _FM.match(text)
@@ -29,7 +29,7 @@ def _parse(text):
 
 
 def _all():
-    """[(name, description, body)] de cada skill del directorio."""
+    """[(name, description, body)] for each skill in the directory."""
     out = []
     if not os.path.isdir(SKILLS_DIR):
         return out
@@ -46,12 +46,12 @@ def _all():
 
 
 def list_skills():
-    """[(name, description)] para mostrar el catálogo."""
+    """[(name, description)] for displaying the catalog."""
     return [(n, d) for n, d, _ in _all()]
 
 
 def load_skill(name):
-    """El procedimiento (body) de una skill por nombre, o None si no existe."""
+    """The procedure (body) of a skill by name, or None if it doesn't exist."""
     for n, _, b in _all():
         if n.lower() == (name or "").lower():
             return b
@@ -59,7 +59,7 @@ def load_skill(name):
 
 
 def catalog():
-    """Bloque para el system prompt con las skills disponibles (o '' si no hay)."""
+    """Block for the system prompt with available skills (or '' if none)."""
     sk = list_skills()
     if not sk:
         return ""

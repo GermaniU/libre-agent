@@ -1,4 +1,4 @@
-"""Clientes HTTP para ollama (modelos locales) y el corpus (RAG del vault)."""
+"""HTTP clients for ollama (local models) and the corpus (vault RAG)."""
 import json
 import requests
 import config
@@ -6,10 +6,10 @@ import config
 
 # ---------------------------------------------------------------- Ollama
 def list_local_models():
-    """Devuelve TODOS los modelos locales (excluye solo :cloud).
+    """Returns ALL local models (excludes only :cloud).
 
-    Cada item: {name, size, gb, kind, fits}  kind in {chat, vision, embed};
-    fits=False si no entra en la VRAM (correría parcialmente en CPU, lento).
+    Each item: {name, size, gb, kind, fits}  kind in {chat, vision, embed};
+    fits=False if it does not fit in VRAM (would run partially on CPU, slow).
     """
     r = requests.get(f"{config.OLLAMA_URL}/api/tags", timeout=8)
     r.raise_for_status()
@@ -18,7 +18,7 @@ def list_local_models():
         name = m["name"]
         size = m.get("size", 0)
         if name.endswith(":cloud") or "cloud" in name:
-            continue  # solo local
+            continue  # local only
         low = name.lower()
         if any(h in low for h in config.EMBED_HINT):
             kind = "embed"
@@ -33,7 +33,7 @@ def list_local_models():
 
 
 def chat_stream(model, messages, temperature=0.4):
-    """Genera la respuesta del modelo local en streaming (yield de tokens)."""
+    """Generates the local model's response in streaming (yields tokens)."""
     payload = {
         "model": model,
         "messages": messages,
@@ -54,7 +54,7 @@ def chat_stream(model, messages, temperature=0.4):
 
 
 def context_limit(model):
-    """Ventana de contexto del modelo: la cargada en runtime si está corriendo, si no la del modelfile."""
+    """Model's context window: the one loaded at runtime if running, otherwise the modelfile's."""
     try:
         for m in requests.get(f"{config.OLLAMA_URL}/api/ps", timeout=5).json().get("models", []):
             if m.get("name") == model and m.get("context_length"):
@@ -73,14 +73,14 @@ def context_limit(model):
 
 
 def _ctx_estimate(msgs, measured):
-    # con kv-cache caliente prompt_eval_count solo cuenta tokens nuevos;
-    # cubrimos ese caso estimando por caracteres (~4 chars/token)
+    # with a warm kv-cache prompt_eval_count only counts new tokens;
+    # we cover that case by estimating from characters (~4 chars/token)
     by_chars = sum(len(str(m.get("content") or "")) for m in msgs) // 4
     return max(measured, by_chars)
 
 
 def _err_text(resp):
-    """Texto del error de ollama en minúsculas (o '' si la respuesta fue OK)."""
+    """Ollama's error text in lowercase (or '' if the response was OK)."""
     if resp.status_code < 400:
         return ""
     try:
@@ -91,17 +91,17 @@ def _err_text(resp):
 
 def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None, bridge=None,
                     use_tools=True, think=None):
-    """Loop de agente: el modelo pide tools, las ejecutamos y le devolvemos el resultado.
+    """Agent loop: the model requests tools, we execute them and return the result.
 
-    Devuelve (respuesta_final, log_de_tool_calls, usage). usage = {"total": tokens
-    procesados en todas las rondas, "ctx": contexto ocupado al final, "rounds": n}.
-    on_tool(name, args) se llama antes de ejecutar cada tool. bridge es un
-    MCPBridge opcional cuyas tools se suman a las locales.
+    Returns (final_response, tool_calls_log, usage). usage = {"total": tokens
+    processed across all rounds, "ctx": context used at the end, "rounds": n}.
+    on_tool(name, args) is called before executing each tool. bridge is an
+    optional MCPBridge whose tools are added to the local ones.
 
-    use_tools=False → chat puro: no se ofrecen tools, el modelo responde solo con su
-    conocimiento. think: None=default del modelo, True/False fuerza el modo razonamiento
-    (think=False acelera modelos de razonamiento). Si el modelo no
-    soporta tools o thinking, se quita esa opción y se reintenta (fallback sin romper).
+    use_tools=False → pure chat: no tools are offered, the model responds only with its
+    own knowledge. think: None=model default, True/False forces reasoning mode
+    (think=False speeds up reasoning models). If the model does not
+    support tools or thinking, that option is removed and it retries (fallback without breaking).
     """
     import tools
     specs = (tools.SPECS + (bridge.specs if bridge else [])) if use_tools else None
@@ -116,8 +116,8 @@ def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None
         if think is not None:
             payload["think"] = think
         r = requests.post(f"{config.OLLAMA_URL}/api/chat", json=payload, timeout=600)
-        # degradación elegante: si el modelo no soporta tools o thinking, quitamos esa
-        # opción (para ésta y las próximas rondas) y reintentamos, sin tirar error.
+        # graceful degradation: if the model does not support tools or thinking, we remove that
+        # option (for this and the next rounds) and retry, without raising an error.
         for _attempt in range(2):
             err = _err_text(r)
             if not err:
@@ -163,13 +163,13 @@ def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None
 
 def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridge=None,
                            use_tools=True, think=None, options=None):
-    """Igual que chat_with_tools pero en STREAMING: es un generador de eventos.
+    """Same as chat_with_tools but STREAMING: it's an event generator.
 
-    Yields tuplas (kind, payload):
-      ("token", str)        -> un pedazo de la respuesta final (para pintar en vivo)
-      ("tool",  (name,args))-> se va a ejecutar una tool
-      ("done",  {"reply","calls","usage"}) -> fin, con el resultado completo
-    Resuelve las rondas de tools en streaming; los tokens del texto final salen en vivo.
+    Yields tuples (kind, payload):
+      ("token", str)        -> a chunk of the final response (to render live)
+      ("tool",  (name,args))-> a tool is about to be executed
+      ("done",  {"reply","calls","usage"}) -> end, with the complete result
+    Resolves the tool rounds in streaming; the final text tokens come out live.
     """
     import tools
     specs = (tools.SPECS + (bridge.specs if bridge else [])) if use_tools else None
@@ -184,7 +184,7 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
         if think is not None:
             payload["think"] = think
 
-        # abrir el stream, con degradación elegante si el modelo no soporta tools/thinking
+        # open the stream, with graceful degradation if the model does not support tools/thinking
         r = None
         for _attempt in range(3):
             r = requests.post(f"{config.OLLAMA_URL}/api/chat", json=payload, stream=True, timeout=600)
@@ -248,7 +248,7 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
 
 # ---------------------------------------------------------------- Corpus / RAG
 def corpus_search(query, limit=6):
-    """Busca en Qdrant (vía API del corpus) y normaliza los hits."""
+    """Searches in Qdrant (via the corpus API) and normalizes the hits."""
     r = requests.post(
         f"{config.CORPUS_URL}/corpus/search",
         headers={"X-API-Key": config.CORPUS_KEY, "Content-Type": "application/json"},
@@ -271,7 +271,7 @@ def corpus_search(query, limit=6):
 
 
 def build_rag_context(hits):
-    """Arma el bloque de contexto citado que se inyecta al modelo local."""
+    """Builds the cited context block that gets injected into the local model."""
     blocks = []
     for i, h in enumerate(hits, 1):
         body = h["text"] or h["summary"]
