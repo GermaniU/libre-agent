@@ -61,5 +61,7 @@ Se editan en `~/llama.cpp-bin/run-llama.sh`:
   de ollama (etiquetados `llama.cpp`).
 - LocalAgent rutea el chat a `/v1/chat/completions` (streaming) cuando elegís ese modelo.
 - **ollama no se ve afectado**: sigue con sus tools, memoria, etc.
-- **Limitación actual**: por el backend llama.cpp es **solo chat de texto** (sin tools/MCP).
-  Las tools siguen en los modelos de ollama. (Tools por llama.cpp = pendiente a futuro.)
+- **Tools + MCP funcionan** (function-calling de OpenAI): las tools locales (web, vault, HTML,
+  filesystem…) y las de MCP se ofrecen y ejecutan igual que en ollama. Verificado con el Qwen3.6.
+  Importante: el modelo llama tools bien **con el razonamiento desactivado** (default de
+  LocalAgent); con "Thinking" prendido el pensamiento puede comerse el presupuesto de tokens.

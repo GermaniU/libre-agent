@@ -183,62 +183,160 @@ def _openai_payload(model, messages, temperature, options, think=None):
     return payload
 
 
-def _openai_stream(base, model, messages, temperature=0.4, options=None, think=None):
-    """Stream a chat from an OpenAI-compatible backend (text only, no tools for now).
-
-    Yields ("token", str) chunks and a final ("done", {reply, calls, usage}).
-    """
-    payload = _openai_payload(model, messages, temperature, options, think)
-    payload["stream"] = True
-    payload["stream_options"] = {"include_usage": True}
-    parts, reasoning = [], []
-    usage = {"total": 0, "ctx": 0, "rounds": 1, "gen": 0}
-    r = requests.post(f"{base}/chat/completions", json=payload, stream=True, timeout=600)
-    r.raise_for_status()
-    for raw in r.iter_lines():
-        if not raw:
-            continue
-        line = raw.decode("utf-8") if isinstance(raw, bytes) else raw
-        if not line.startswith("data:"):
-            continue
-        data = line[5:].strip()
-        if data == "[DONE]":
-            break
+def _run_tool(name, args, bridge):
+    """Execute a tool (MCP bridge or local) and return its string result."""
+    import tools as tools_mod
+    if bridge and name in bridge.tools:
         try:
-            obj = json.loads(data)
-        except ValueError:
+            return bridge.call(name, args)
+        except Exception as e:
+            return f"Error ejecutando {name}: {e}"
+    return tools_mod.execute(name, args)
+
+
+def _openai_collect_calls(streamed, content, specs):
+    """[{name, args}] from streamed OpenAI tool_calls; falls back to <tool_call> text."""
+    calls = []
+    for idx in sorted(streamed):
+        slot = streamed[idx]
+        if not slot["name"]:
             continue
-        choices = obj.get("choices") or []
-        if choices:
-            delta = choices[0].get("delta") or {}
-            # reasoning models (Qwen w/ --reasoning) split thinking into reasoning_content;
-            # stream it too so the user sees activity, but the final reply is the answer
-            rtok = delta.get("reasoning_content")
-            if rtok:
-                reasoning.append(rtok)
-                yield ("token", rtok)
-            token = delta.get("content")
-            if token:
-                parts.append(token)
-                yield ("token", token)
-        u = obj.get("usage")
-        if u:
-            usage["total"] = usage["ctx"] = u.get("total_tokens", 0)
-            usage["gen"] = u.get("completion_tokens", 0)
-    yield ("done", {"reply": "".join(parts) or "".join(reasoning), "calls": [], "usage": usage})
+        try:
+            args = json.loads(slot["args"]) if slot["args"].strip() else {}
+        except ValueError:
+            args = {}
+        calls.append({"name": slot["name"], "args": args})
+    if not calls and specs:  # some models write the tool call as text instead
+        calls = [{"name": tc["function"]["name"], "args": tc["function"]["arguments"]}
+                 for tc in _parse_text_tool_calls(content)]
+    return calls
 
 
-def _openai_call(base, model, messages, temperature=0.4, options=None, think=None):
-    """Non-streaming chat from an OpenAI-compatible backend. Returns (reply, [], usage)."""
-    payload = _openai_payload(model, messages, temperature, options, think)
-    r = requests.post(f"{base}/chat/completions", json=payload, timeout=600)
-    r.raise_for_status()
-    d = r.json()
-    reply = d["choices"][0]["message"].get("content") or ""
-    u = d.get("usage", {})
-    usage = {"total": u.get("total_tokens", 0), "ctx": u.get("total_tokens", 0),
-             "rounds": 1, "gen": u.get("completion_tokens", 0)}
-    return reply, [], usage
+def _openai_assistant_turn(calls):
+    """OpenAI-style tool_calls list for the assistant message that requested them."""
+    return [{"id": f"call_{i}", "type": "function",
+             "function": {"name": c["name"], "arguments": json.dumps(c["args"], ensure_ascii=False)}}
+            for i, c in enumerate(calls)]
+
+
+def _openai_stream(base, model, messages, temperature=0.4, options=None, think=None,
+                   specs=None, bridge=None, max_rounds=6):
+    """Stream a chat from an OpenAI-compatible backend, WITH tool support.
+
+    Yields ("token", str), ("tool", (name, args)) and a final ("done", {reply, calls, usage}).
+    """
+    msgs = list(messages)
+    calls_log = []
+    usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}
+    for _ in range(max_rounds):
+        payload = _openai_payload(model, msgs, temperature, options, think)
+        payload["stream"] = True
+        payload["stream_options"] = {"include_usage": True}
+        if specs:
+            payload["tools"] = specs
+        r = requests.post(f"{base}/chat/completions", json=payload, stream=True, timeout=600)
+        r.raise_for_status()
+        parts, reasoning, streamed = [], [], {}
+        for raw in r.iter_lines():
+            if not raw:
+                continue
+            line = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+            if not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if data == "[DONE]":
+                break
+            try:
+                obj = json.loads(data)
+            except ValueError:
+                continue
+            choices = obj.get("choices") or []
+            if choices:
+                delta = choices[0].get("delta") or {}
+                # reasoning models split thinking into reasoning_content; stream it for
+                # live feedback, but the final reply is the answer (content)
+                rtok = delta.get("reasoning_content")
+                if rtok:
+                    reasoning.append(rtok)
+                    yield ("token", rtok)
+                token = delta.get("content")
+                if token:
+                    parts.append(token)
+                    yield ("token", token)
+                for tc in (delta.get("tool_calls") or []):  # arrive fragmented, by index
+                    slot = streamed.setdefault(tc.get("index", 0), {"name": "", "args": ""})
+                    fn = tc.get("function") or {}
+                    if fn.get("name"):
+                        slot["name"] = fn["name"]
+                    if fn.get("arguments"):
+                        slot["args"] += fn["arguments"]
+            u = obj.get("usage")
+            if u:
+                usage["total"] = usage["ctx"] = u.get("total_tokens", 0)
+                usage["gen"] += u.get("completion_tokens", 0)
+        usage["rounds"] += 1
+        content = "".join(parts)
+        calls = _openai_collect_calls(streamed, content, specs)
+        if not calls:
+            yield ("done", {"reply": content or "".join(reasoning), "calls": calls_log, "usage": usage})
+            return
+        oai = _openai_assistant_turn(calls)
+        msgs.append({"role": "assistant", "content": content, "tool_calls": oai})
+        for i, c in enumerate(calls):
+            yield ("tool", (c["name"], c["args"]))
+            result = _run_tool(c["name"], c["args"], bridge)
+            calls_log.append({"tool": c["name"], "args": c["args"], "result": result})
+            msgs.append({"role": "tool", "tool_call_id": oai[i]["id"], "content": str(result)})
+    yield ("done", {"reply": "⚠️ Corté el loop: máximo de rondas de tools.",
+                    "calls": calls_log, "usage": usage})
+
+
+def _openai_call(base, model, messages, temperature=0.4, options=None, think=None,
+                 specs=None, bridge=None, on_tool=None, max_rounds=6):
+    """Non-streaming chat from an OpenAI-compatible backend, WITH tool support.
+
+    Returns (reply, tool_calls_log, usage).
+    """
+    msgs = list(messages)
+    calls_log = []
+    usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}
+    for _ in range(max_rounds):
+        payload = _openai_payload(model, msgs, temperature, options, think)
+        if specs:
+            payload["tools"] = specs
+        r = requests.post(f"{base}/chat/completions", json=payload, timeout=600)
+        r.raise_for_status()
+        d = r.json()
+        u = d.get("usage", {})
+        usage["total"] = usage["ctx"] = u.get("total_tokens", 0)
+        usage["gen"] += u.get("completion_tokens", 0)
+        usage["rounds"] += 1
+        msg = d["choices"][0]["message"]
+        content = msg.get("content") or ""
+        calls = []
+        for tc in (msg.get("tool_calls") or []):
+            fn = tc.get("function") or {}
+            if not fn.get("name"):
+                continue
+            try:
+                args = json.loads(fn.get("arguments") or "{}")
+            except ValueError:
+                args = {}
+            calls.append({"name": fn["name"], "args": args})
+        if not calls and specs:
+            calls = [{"name": tc["function"]["name"], "args": tc["function"]["arguments"]}
+                     for tc in _parse_text_tool_calls(content)]
+        if not calls:
+            return content, calls_log, usage
+        oai = _openai_assistant_turn(calls)
+        msgs.append({"role": "assistant", "content": content, "tool_calls": oai})
+        for i, c in enumerate(calls):
+            if on_tool:
+                on_tool(c["name"], c["args"])
+            result = _run_tool(c["name"], c["args"], bridge)
+            calls_log.append({"tool": c["name"], "args": c["args"], "result": result})
+            msgs.append({"role": "tool", "tool_call_id": oai[i]["id"], "content": str(result)})
+    return "⚠️ Corté el loop: máximo de rondas de tools.", calls_log, usage
 
 
 def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None, bridge=None,
@@ -255,10 +353,11 @@ def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None
     (think=False speeds up reasoning models). If the model does not
     support tools or thinking, that option is removed and it retries (fallback without breaking).
     """
-    if _is_openai(model):  # OpenAI-compatible backend (llama.cpp): no tools for now
-        return _openai_call(_openai_models[model], model, messages, temperature, think=think)
     import tools
     specs = (tools.SPECS + (bridge.specs if bridge else [])) if use_tools else None
+    if _is_openai(model):  # OpenAI-compatible backend (llama.cpp)
+        return _openai_call(_openai_models[model], model, messages, temperature,
+                            think=think, specs=specs, bridge=bridge, on_tool=on_tool)
     msgs = list(messages)
     calls_log = []
     usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}
@@ -332,11 +431,12 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
       ("done",  {"reply","calls","usage"}) -> end, with the complete result
     Resolves the tool rounds in streaming; the final text tokens come out live.
     """
-    if _is_openai(model):  # OpenAI-compatible backend (llama.cpp): stream text, no tools yet
-        yield from _openai_stream(_openai_models[model], model, messages, temperature, options, think)
-        return
     import tools
     specs = (tools.SPECS + (bridge.specs if bridge else [])) if use_tools else None
+    if _is_openai(model):  # OpenAI-compatible backend (llama.cpp)
+        yield from _openai_stream(_openai_models[model], model, messages, temperature,
+                                  options, think, specs=specs, bridge=bridge)
+        return
     msgs = list(messages)
     calls_log = []
     usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}
