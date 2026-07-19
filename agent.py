@@ -25,6 +25,21 @@ def load_soul() -> str:
     return soul or prompts.load("soul_fallback.md")
 
 
+def compact_messages(messages, summary, keep=4):
+    """Collapse an old conversation tail into a single summary message.
+
+    Returns a new list: one assistant message carrying ``summary`` followed by the
+    last ``keep`` messages of ``messages`` (kept verbatim for immediate context).
+    If there aren't more than ``keep`` messages, returns ``messages`` unchanged
+    (nothing to compact). Pure function: no I/O, no network.
+    """
+    if len(messages) <= keep:
+        return messages
+    recent = messages[-keep:] if keep > 0 else []
+    summary_msg = {"role": "assistant", "content": "📝 Resumen de lo conversado antes:\n" + summary}
+    return [summary_msg] + recent
+
+
 def build_system(soul_text, prompt, use_memory=True, k=4):
     """Assemble the turn's system prompt: soul + available skills + recalled memories.
 

@@ -36,6 +36,9 @@ const state = {
   selectedMcps: JSON.parse(localStorage.getItem('la-mcps2') ?? '[]'),
   metaShow: JSON.parse(localStorage.getItem('la-meta') ?? 'true'),
   enterSends: JSON.parse(localStorage.getItem('la-enter') ?? 'true'),
+  autoCompact: JSON.parse(localStorage.getItem('la-autocompact') ?? 'false'),
+  compacting: false,
+  compactNotice: null,
   copiedId: null,
   thinkOpen: {}, // msgIndex -> bool
   callsOpen: null,
@@ -69,6 +72,7 @@ function savePrefs() {
   localStorage.setItem('la-mcps2', JSON.stringify(state.selectedMcps));
   localStorage.setItem('la-meta', state.metaShow);
   localStorage.setItem('la-enter', state.enterSends);
+  localStorage.setItem('la-autocompact', state.autoCompact);
 }
 
 function shortArgs(args) {
@@ -617,7 +621,7 @@ function renderComposer() {
           <div style="flex:1"></div>
           <span id="composer-count" style="font-size:11px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;visibility:${draftOk ? 'visible' : 'hidden'}">${state.draft.length} car.</span>
           ${!state.sending ? `
-            <button id="composer-send" data-action="send" ${draftOk ? '' : 'disabled'} aria-label="Enviar mensaje" title="Enviar (Enter)" style="width:34px;height:34px;border:none;border-radius:10px;background:${draftOk ? 'var(--ac)' : 'var(--bg3)'};color:${draftOk ? '#fff' : 'var(--tx3)'};cursor:${draftOk ? 'pointer' : 'default'};display:flex;align-items:center;justify-content:center;transition:background .15s">
+            <button id="composer-send" data-action="send" ${draftOk && !state.compacting ? '' : 'disabled'} aria-label="Enviar mensaje" title="${state.compacting ? 'Compactando…' : 'Enviar (Enter)'}" style="width:34px;height:34px;border:none;border-radius:10px;background:${draftOk && !state.compacting ? 'var(--ac)' : 'var(--bg3)'};color:${draftOk && !state.compacting ? '#fff' : 'var(--tx3)'};cursor:${draftOk && !state.compacting ? 'pointer' : 'default'};display:flex;align-items:center;justify-content:center;transition:background .15s">
               <svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>
             </button>
           ` : `
@@ -627,11 +631,22 @@ function renderComposer() {
           `}
         </div>
       </div>
-      <div style="display:flex;align-items:center;padding:7px 6px 0;font-size:11px;color:var(--tx3)">
-        <span><kbd style="font-family:'IBM Plex Mono',monospace;font-size:10px;border:1px solid var(--bd);border-radius:4px;padding:1px 4px;background:var(--bg1)">Enter</kbd> envía · <kbd style="font-family:'IBM Plex Mono',monospace;font-size:10px;border:1px solid var(--bd);border-radius:4px;padding:1px 4px;background:var(--bg1)">Shift+Enter</kbd> salto de línea</span>
-        <span style="flex:1"></span>
-        ${(() => { const st = modelStatus(); return `<span style="display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:${st.dot}"></span>${esc(st.text)}</span>`; })()}
-      </div>
+      ${(() => {
+        const msgs = (state.sessions[state.activeId]?.messages || []).length;
+        const canCompact = msgs > 4;
+        const btn = 'display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 9px;border:1px solid var(--bd);border-radius:7px;background:var(--bg1);color:var(--tx2);font-family:inherit;font-size:11.5px;font-weight:500';
+        const st = modelStatus();
+        return `
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:7px 12px;padding:8px 4px 0;font-size:11px;color:var(--tx3)">
+        <button data-action="newChat" aria-label="Nuevo chat" title="Empezar un chat nuevo" style="${btn};cursor:pointer">＋ Nuevo</button>
+        <button data-action="compact" ${state.compacting ? 'disabled' : ''} aria-label="Compactar conversación" title="${canCompact ? 'Resumir la conversación para liberar contexto' : 'Todavía no hay suficiente conversación para compactar'}" style="${btn};cursor:${state.compacting ? 'default' : 'pointer'};opacity:${state.compacting ? '.6' : (canCompact ? '1' : '.5')}">⤺ ${state.compacting ? 'Compactando…' : 'Compactar'}</button>
+        ${state.compactNotice ? `<span style="color:var(--ok);font-weight:500">${esc(state.compactNotice)}</span>` : ''}
+        <div style="margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px">
+          <span><kbd style="font-family:'IBM Plex Mono',monospace;font-size:10px;border:1px solid var(--bd);border-radius:4px;padding:1px 4px;background:var(--bg1)">Enter</kbd> envía · <kbd style="font-family:'IBM Plex Mono',monospace;font-size:10px;border:1px solid var(--bd);border-radius:4px;padding:1px 4px;background:var(--bg1)">⇧Enter</kbd> salto</span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:${st.dot}"></span>${esc(st.text)}</span>
+        </div>
+      </div>`;
+      })()}
     </div>
   </div>`;
 }
@@ -651,21 +666,20 @@ function renderAdvanced() {
         </button>
       </div>
       <div style="flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:20px">
-        <label style="display:block" title="Recomendado: 0.2–0.4 para tools, datos y código · 0.7–1.0 para escritura creativa">
+        <label style="display:block" title="Controla la aleatoriedad. Más alto = respuestas más creativas y variadas; más bajo = más predecibles y consistentes. Recomendado: 0.2–0.4 para tools/datos/código, 0.7–1.0 para escritura creativa.">
           <span style="display:flex;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:8px">Temperatura<span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--tx)">${state.temp}</span></span>
           <input data-input="temp" type="range" min="0" max="2" step="0.1" value="${state.temp}" style="width:100%;accent-color:var(--ac)">
-          <span style="display:block;font-size:11px;color:var(--tx3);margin-top:4px">Más alto = más creativo, menos predecible. Recomendado: 0.2–0.4 (tools/datos/código) · 0.7–1.0 (creativo).</span>
         </label>
-        <label style="display:block" title="Recorta el vocabulario a lo más probable. Dejalo en 0.9 salvo que sepas por qué lo cambiás; bajarlo hace las respuestas más repetitivas">
+        <label style="display:block" title="Núcleo de probabilidad: el modelo elige solo entre las palabras más probables que juntas suman este porcentaje. Más bajo = más conservador y repetitivo. Dejalo en 0.9 salvo que sepas por qué cambiarlo.">
           <span style="display:flex;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:8px">Top-p<span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--tx)">${state.topP}</span></span>
           <input data-input="topp" type="range" min="0" max="1" step="0.05" value="${state.topP}" style="width:100%;accent-color:var(--ac)">
         </label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <label style="display:block" title="Largo máximo de cada respuesta. 2048 alcanza para casi todo; subilo si te corta respuestas largas">
+          <label style="display:block" title="Largo máximo de la respuesta, en tokens. Si te corta respuestas largas, subilo (~4 caracteres ≈ 1 token).">
             <span style="display:block;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">Máx. tokens</span>
             <input data-input="maxtok" type="number" value="${state.maxTok}" style="width:100%;height:36px;border:1px solid var(--bd);border-radius:9px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:0 10px">
           </label>
-          <label style="display:block" title="Ventana de contexto (num_ctx): cuánta conversación y resultados de tools recuerda el modelo. Más contexto = más VRAM; 8k va bien en tu 3060">
+          <label style="display:block" title="Ventana de contexto (num_ctx): cuánta conversación y resultados de tools recuerda el modelo en una sola llamada. Más contexto = más memoria pero más VRAM.">
             <span style="display:block;font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">Contexto</span>
             <select data-input="ctx" style="width:100%;height:36px;border:1px solid var(--bd);border-radius:9px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:0 8px">
               ${['4k', '8k', '32k'].map(v => `<option value="${v}" ${state.ctx === v ? 'selected' : ''}>${{ '4k': '4 096', '8k': '8 192', '32k': '32 768' }[v]}</option>`).join('')}
@@ -761,6 +775,15 @@ function renderCfgGeneral() {
       </div>
       <button data-action="toggleMeta" role="switch" aria-checked="${state.metaShow}" style="width:36px;height:21px;border-radius:999px;border:none;cursor:pointer;background:${state.metaShow ? 'var(--ac)' : 'var(--bg3)'};position:relative;transition:background .15s;flex:none">
         <span style="position:absolute;top:2.5px;left:${state.metaShow ? '17.5px' : '2.5px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s"></span>
+      </button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500;color:var(--tx2)">Auto-compactar contexto</div>
+        <div style="font-size:11.5px;color:var(--tx3)">Al llegar al 85% del contexto, resume automáticamente la conversación.</div>
+      </div>
+      <button data-action="toggleAutoCompact" role="switch" aria-checked="${state.autoCompact}" style="width:36px;height:21px;border-radius:999px;border:none;cursor:pointer;background:${state.autoCompact ? 'var(--ac)' : 'var(--bg3)'};position:relative;transition:background .15s;flex:none">
+        <span style="position:absolute;top:2.5px;left:${state.autoCompact ? '17.5px' : '2.5px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s"></span>
       </button>
     </div>
   </div>`;
@@ -923,6 +946,8 @@ function attachEvents() {
         break;
       case 'send': sendMessage(); break;
       case 'stop': stopMessage(); break;
+      case 'compact': compactChat(); break;
+      case 'toggleAutoCompact': state.autoCompact = !state.autoCompact; savePrefs(); render(); break;
       case 'suggest':
         state.draft = btn.dataset.text;
         render();
@@ -1002,11 +1027,11 @@ function attachEvents() {
     if (t.dataset.input === 'draft') {
       if (e.key === 'Enter' && !e.shiftKey && state.enterSends) {
         e.preventDefault();
-        if (state.draft.trim() && !state.sending) sendMessage();
+        if (state.draft.trim() && !state.sending && !state.compacting) sendMessage();
       }
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !state.enterSends) {
         e.preventDefault();
-        if (state.draft.trim() && !state.sending) sendMessage();
+        if (state.draft.trim() && !state.sending && !state.compacting) sendMessage();
       }
     }
   });
@@ -1051,6 +1076,39 @@ async function clearChat() {
   state.sessions[name] = { messages: [], tools: {}, mem: {}, tokens: 0, ctx: 0, updated: Date.now() / 1000 };
   await saveSession(name, state.sessions[name]);
   render();
+}
+
+function flashNotice(text, ms = 2500) {
+  state.compactNotice = text;
+  render();
+  setTimeout(() => { state.compactNotice = null; render(); }, ms);
+}
+
+async function compactChat() {
+  const name = state.activeId;
+  if (!name || state.compacting) return;
+  const sess = state.sessions[name];
+  // nothing to compact on a short chat — give feedback instead of silently doing nothing
+  if (!sess || (sess.messages || []).length <= 4) {
+    flashNotice('Nada para compactar todavía (conversación corta)');
+    return;
+  }
+  if (!state.modelId) { alert('Seleccioná un modelo primero.'); return; }
+
+  state.compacting = true;
+  render();
+  try {
+    const data = await apiPost('/api/compact', { session: name, model: state.modelId, keep: 4 });
+    if (data.compacted && data.session) {
+      state.sessions[name] = data.session;
+      flashNotice('✓ Conversación compactada');
+    }
+  } catch (e) {
+    alert(`No se pudo compactar: ${e.message}`);
+  } finally {
+    state.compacting = false;
+    render();
+  }
 }
 
 async function commitRename(oldName) {
@@ -1235,7 +1293,8 @@ function scrollToBottom() {
 // ----------------------------------------------------------------- streaming chat
 async function sendMessage() {
   const text = state.draft.trim();
-  if (!text || state.sending) return;
+  // block while compacting: both would write the same session (race)
+  if (!text || state.sending || state.compacting) return;
   if (!state.activeId) await newChat();
   if (!state.modelId) { alert('Seleccioná un modelo primero.'); return; }
 
@@ -1321,6 +1380,11 @@ async function sendMessage() {
     sess.updated = Date.now() / 1000;
     await saveSession(name, sess);
     render();
+    // auto-compact: free up context once we cross 85% usage, if enabled
+    if (state.autoCompact && !state.compacting) {
+      const ratio = (sess.ctx || 0) / ctxTokens(state.ctx);
+      if (ratio > 0.85) await compactChat();
+    }
   }
 }
 

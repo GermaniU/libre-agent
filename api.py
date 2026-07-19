@@ -18,6 +18,7 @@ import agent
 import clients
 import config
 import mcp_bridge
+import prompts
 import store
 
 # Entry point: configure logging once (LOG_LEVEL env overrides; default INFO).
@@ -73,6 +74,12 @@ class RenameRequest(BaseModel):
 
 class SoulUpdate(BaseModel):
     content: str
+
+
+class CompactRequest(BaseModel):
+    session: str
+    model: str
+    keep: int = 4
 
 
 # ---------------------------------------------------------------- API
@@ -255,6 +262,49 @@ def set_soul(req: SoulUpdate):
 @app.get("/api/context-limit")
 def context_limit(model: str):
     return {"limit": clients.context_limit(model)}
+
+
+@app.post("/api/compact")
+def compact(req: CompactRequest):
+    """Summarizes the old part of a session and collapses it into one message.
+
+    Frees up context (like Claude Code's /compact): the oldest messages are
+    replaced by a single assistant message with their summary, keeping the last
+    ``req.keep`` messages verbatim.
+    """
+    try:
+        sessions = store.load_sessions()
+        sess = sessions.get(req.session)
+        if not sess:
+            raise HTTPException(status_code=404, detail="No existe esa sesión")
+        messages = sess.get("messages", [])
+        if len(messages) <= req.keep:
+            return {"ok": True, "compacted": False}
+
+        old = messages[:-req.keep]
+        lines = []
+        for m in old:
+            who = "Usuario" if m.get("role") == "user" else "Asistente"
+            lines.append(f"{who}: {m.get('content', '')}")
+        conversation = "\n".join(lines)
+        prompt = prompts.load("compact.txt").format(conversation=conversation)
+
+        summary, _calls, _usage = clients.chat_with_tools(
+            req.model, [{"role": "user", "content": prompt}],
+            temperature=0.3, use_tools=False, think=False)
+
+        sess["messages"] = agent.compact_messages(messages, summary, req.keep)
+        # metadata (tool calls / saved memories) is keyed by old message index — stale now
+        sess["tools"] = {}
+        sess["mem"] = {}
+        sess["ctx"] = 0
+        store.save_session(req.session, sess)
+        return {"ok": True, "compacted": True, "removed": len(old), "session": sess}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.warning("could not compact session %r", req.session, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"No se pudo compactar la conversación: {e}")
 
 
 # ---------------------------------------------------------------- chat streaming
