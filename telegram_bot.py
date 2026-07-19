@@ -18,6 +18,8 @@ import agent
 import clients
 import config
 import mcp_bridge
+import prompts
+import store
 
 # Entry point: configure logging once (LOG_LEVEL env overrides; default INFO).
 logging.basicConfig(
@@ -47,6 +49,28 @@ API = f"https://api.telegram.org/bot{TOKEN}"
 
 state = {"model": config.DEFAULT_MODEL, "messages": [], "tokens": 0, "ctx": 0,
          "mcps": set(), "bridge": None}
+
+# The Telegram thread is persisted to the SAME SQLite store as the web chats, under a
+# fixed name and tagged with channel="telegram" so the UI can group it. Bonus: the
+# conversation now survives bot restarts (before it was in-memory only).
+TG_SESSION = "Telegram"
+
+
+def _persist():
+    store.save_session(TG_SESSION, {
+        "messages": state["messages"], "tools": {}, "mem": {},
+        "tokens": state["tokens"], "ctx": state["ctx"],
+        "channel": "telegram", "updated": time.time(),
+    })
+
+
+def _restore():
+    sess = store.load_sessions().get(TG_SESSION)
+    if sess:
+        state["messages"] = sess.get("messages", [])
+        state["tokens"] = sess.get("tokens", 0)
+        state["ctx"] = sess.get("ctx", 0)
+        log.info("sesión de Telegram restaurada: %d mensajes", len(state["messages"]))
 
 
 def _soul():
@@ -184,7 +208,27 @@ def cmd_model(arg):
 def cmd_new():
     state["messages"] = []
     state["ctx"] = 0
+    _persist()
     return "🆕 Conversación nueva (el contador de tokens de la sesión sigue acumulando)."
+
+
+def cmd_compact(keep=4):
+    """Summarize the old part of the conversation into one message (like the SPA /compact)."""
+    msgs = state["messages"]
+    if len(msgs) <= keep:
+        return "🗜️ Todavía no hay suficiente conversación para compactar."
+    old = msgs[:-keep]
+    lines = [f"{'Usuario' if m.get('role') == 'user' else 'Asistente'}: {m.get('content', '')}"
+             for m in old]
+    prompt = prompts.load("compact.txt").format(conversation="\n".join(lines))
+    summary, _calls, _usage = clients.chat_with_tools(
+        state["model"], [{"role": "user", "content": prompt}],
+        temperature=0.3, use_tools=False, think=False)
+    state["messages"] = agent.compact_messages(msgs, summary, keep)
+    state["ctx"] = 0
+    _persist()
+    return (f"🗜️ Compactado: {len(old)} mensajes resumidos en 1, "
+            f"conservados los últimos {keep}.")
 
 
 def cmd_mcp(arg):
@@ -217,6 +261,7 @@ HELP = ("🧠 *LocalAgent Bot*\n"
         "/model — listar o cambiar modelo\n"
         "/ctx — barra de contexto\n"
         "/new — conversación nueva\n"
+        "/compact — resumir lo viejo y liberar contexto\n"
         "/mcp — listar/conectar MCPs de Claude\n"
         "Cualquier otro texto → chatea con el modelo local (tools incluidas).")
 
@@ -244,9 +289,11 @@ def handle_chat(chat, text):
     tools_used = f" · 🛠️ {', '.join(t['tool'] for t in calls)}" if calls else ""
     send(chat, reply + f"\n\n`{meta['gen']:,} tok · {meta['secs']:.0f}s · {meta['tps']} tok/s{tools_used}`")
     send_media(chat, calls)
+    _persist()
 
 
 def main():
+    _restore()
     me = rq.get(f"{API}/getMe", timeout=15).json()["result"]["username"]
     print(f"bot @{me} escuchando (user permitido: {ALLOWED})")
     offset = None
@@ -273,6 +320,9 @@ def main():
                     send(chat, _ctx_line())
                 elif cmd == "/new":
                     send(chat, cmd_new())
+                elif cmd in ("/compact", "/compactar"):
+                    typing(chat)
+                    send(chat, cmd_compact())
                 elif cmd == "/mcp":
                     send(chat, cmd_mcp(arg))
                 else:

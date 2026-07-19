@@ -293,9 +293,8 @@ function renderSidebar() {
         <svg class="svg-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6"></path></svg>
       </button>
     </div>
-    <div style="padding:8px 20px 4px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Espacios</div>
     <nav aria-label="Espacios" style="flex:1;overflow-y:auto;padding:2px 0 8px;display:flex;flex-direction:column;gap:1px">
-      ${sessions.map(([name, sess]) => renderSpaceRow(name, sess, name === activeId)).join('')}
+      ${renderSpaceGroups(sessions, activeId)}
     </nav>
     <div style="border-top:1px solid var(--bd);padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--tx3)">
       <span style="width:7px;height:7px;border-radius:50%;background:${status.dot};flex:none"></span>
@@ -305,6 +304,37 @@ function renderSidebar() {
       </button>
     </div>
   </aside>`;
+}
+
+// Sessions grouped by origin channel: Web chats and Telegram chats live in the same
+// SQLite store now, tagged with `channel`. Missing/unknown channel defaults to 'web'
+// (all legacy sessions predate the tag). Empty groups are not rendered.
+const CHANNEL_META = {
+  web: { label: 'Web', icon: '💬' },
+  telegram: { label: 'Telegram', icon: '✈️' },
+};
+const CHANNEL_ORDER = ['web', 'telegram'];
+
+function renderSpaceGroups(sessions, activeId) {
+  const groups = {};
+  for (const [name, sess] of sessions) {
+    const ch = sess.channel === 'telegram' ? 'telegram' : 'web';
+    (groups[ch] = groups[ch] || []).push([name, sess]);
+  }
+  const channels = CHANNEL_ORDER.filter(ch => groups[ch]?.length);
+  // any unforeseen channel value still shows up, after the known ones
+  for (const ch of Object.keys(groups)) if (!channels.includes(ch)) channels.push(ch);
+
+  return channels.map(ch => {
+    const meta = CHANNEL_META[ch] || { label: ch, icon: '•' };
+    const rows = groups[ch].map(([name, sess]) => renderSpaceRow(name, sess, name === activeId)).join('');
+    return `
+      <div style="padding:10px 20px 4px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);display:flex;align-items:center;gap:6px">
+        <span aria-hidden="true">${meta.icon}</span><span>${esc(meta.label)}</span>
+        <span style="opacity:.55;font-weight:500">${groups[ch].length}</span>
+      </div>
+      ${rows}`;
+  }).join('');
 }
 
 function renderSpaceRow(name, sess, active) {
@@ -1079,7 +1109,7 @@ async function newChat() {
     let n = 1;
     while (state.sessions[base + n]) n++;
     const name = base + n;
-    state.sessions[name] = { messages: [], tools: {}, mem: {}, tokens: 0, ctx: 0, updated: Date.now() / 1000 };
+    state.sessions[name] = { messages: [], tools: {}, mem: {}, tokens: 0, ctx: 0, channel: 'web', updated: Date.now() / 1000 };
     state.activeId = name;
     await saveSession(name, state.sessions[name]);
     render();
@@ -1091,7 +1121,7 @@ async function newChat() {
 async function clearChat() {
   const name = state.activeId;
   if (!name) return;
-  state.sessions[name] = { messages: [], tools: {}, mem: {}, tokens: 0, ctx: 0, updated: Date.now() / 1000 };
+  state.sessions[name] = { messages: [], tools: {}, mem: {}, tokens: 0, ctx: 0, channel: 'web', updated: Date.now() / 1000 };
   await saveSession(name, state.sessions[name]);
   render();
 }
