@@ -4,12 +4,15 @@ Everything runs on your LAN: ollama + corpus/Qdrant (optional). Zero cloud token
 The model decides on its own when to use web, vault or generate HTML (see soul.md).
 """
 import json
+import logging
 import os
 import subprocess
 import time
 
 import psutil
 import streamlit as st
+
+log = logging.getLogger("localagent.ui")  # Streamlit configures the root logger
 
 import agent
 import clients
@@ -106,6 +109,7 @@ def _gpu_stats():
         util, used, total, temp = [float(x) for x in out.split(",")]
         return {"util": util, "vram_used": used, "vram_total": total, "temp": temp}
     except Exception:
+        log.debug("nvidia-smi unavailable", exc_info=True)
         return None
 
 

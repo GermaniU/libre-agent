@@ -3,12 +3,16 @@
 Each tool ALWAYS returns a string (what the model sees as the result).
 """
 import json
+import logging
 import re
 
 import requests
 
 import clients
 import config
+import prompts
+
+log = logging.getLogger("localagent.tools")
 
 UA = {"User-Agent": "Mozilla/5.0 (LocalAgent; +local)"}
 
@@ -137,6 +141,7 @@ def write_html(filename, content, title=""):
     try:
         ip = socket.gethostbyname(socket.gethostname())
     except Exception:
+        log.debug("could not resolve LAN IP for write_html", exc_info=True)
         ip = "localhost"
     return (f"Página guardada. Abrila en: http://localhost:8501/app/static/{name}.html"
             f" (desde otra máquina de la LAN: http://{ip}:8501/app/static/{name}.html)")
@@ -253,108 +258,47 @@ def run_cmd(command, timeout=60):
 
 
 # ---------------------------------------------------------------- specs
-SPECS = [
-    {"type": "function", "function": {
-        "name": "web_search",
-        "description": "Busca en la web (DuckDuckGo). Úsala para info actual o externa al vault.",
-        "parameters": {"type": "object", "properties": {
-            "query": {"type": "string", "description": "Términos de búsqueda"},
-            "max_results": {"type": "integer", "description": "Cantidad de resultados (default 5)"},
-        }, "required": ["query"]},
-    }},
-    {"type": "function", "function": {
-        "name": "web_fetch",
-        "description": "Descarga una URL y devuelve su texto. Úsala para leer un resultado de web_search.",
-        "parameters": {"type": "object", "properties": {
-            "url": {"type": "string", "description": "URL completa (http/https)"},
-            "max_chars": {"type": "integer", "description": "Máximo de caracteres (default 5000)"},
-        }, "required": ["url"]},
-    }},
-    {"type": "function", "function": {
-        "name": "vault_pull",
-        "description": "Actualiza el vault físico con git pull. Usala antes de vault_recent si el usuario pregunta por trabajo muy reciente.",
-        "parameters": {"type": "object", "properties": {}},
-    }},
-    {"type": "function", "function": {
-        "name": "vault_recent",
-        "description": "Qué trabajó el usuario últimamente: lista notas modificadas y devuelve las daily notes de los últimos N días.",
-        "parameters": {"type": "object", "properties": {
-            "days": {"type": "integer", "description": "Días hacia atrás (default 7)"},
-        }},
-    }},
-    {"type": "function", "function": {
-        "name": "vault_read",
-        "description": "Lee una nota completa del vault por ruta relativa, ej: 'Daily Notes/2026-07-10.md'.",
-        "parameters": {"type": "object", "properties": {
-            "path": {"type": "string", "description": "Ruta relativa dentro del vault"},
-        }, "required": ["path"]},
-    }},
-    {"type": "function", "function": {
-        "name": "write_html",
-        "description": "Guarda una página HTML y devuelve la URL para abrirla en el navegador. "
-                       "Úsala cuando el usuario pida un documento, reporte, tabla o página visual. "
-                       "Pasá el HTML completo del body (CSS inline permitido).",
-        "parameters": {"type": "object", "properties": {
-            "filename": {"type": "string", "description": "Nombre del archivo, ej: reporte-ventas"},
-            "content": {"type": "string", "description": "El HTML completo de la página"},
-            "title": {"type": "string", "description": "Título de la pestaña"},
-        }, "required": ["filename", "content"]},
-    }},
-    {"type": "function", "function": {
-        "name": "vault_search",
-        "description": "Busca en las notas personales del vault del usuario (Obsidian). Úsala para preguntas sobre sus notas, libros o proyectos.",
-        "parameters": {"type": "object", "properties": {
-            "query": {"type": "string", "description": "Búsqueda semántica"},
-            "limit": {"type": "integer", "description": "Cantidad de pasajes (default 6)"},
-        }, "required": ["query"]},
-    }},
-    {"type": "function", "function": {
-        "name": "make_dir",
-        "description": "Crea una carpeta (y sus padres) para un proyecto nuevo dentro de C:\\Sites. "
-                       "Úsala al iniciar un proyecto, ej: 'mi-scraper' o 'mi-scraper/src'.",
-        "parameters": {"type": "object", "properties": {
-            "path": {"type": "string", "description": "Ruta relativa dentro del workspace"},
-        }, "required": ["path"]},
-    }},
-    {"type": "function", "function": {
-        "name": "write_file",
-        "description": "Escribe un archivo de texto (script Python, HTML, requirements.txt, README, "
-                       "config, etc.) dentro de C:\\Sites, creando carpetas padre si faltan. "
-                       "Úsala para materializar el código de un proyecto que el usuario luego ejecuta a mano.",
-        "parameters": {"type": "object", "properties": {
-            "path": {"type": "string", "description": "Ruta relativa, ej: 'mi-scraper/main.py'"},
-            "content": {"type": "string", "description": "Contenido completo del archivo"},
-        }, "required": ["path", "content"]},
-    }},
-    {"type": "function", "function": {
-        "name": "list_dir",
-        "description": "Lista el contenido de una carpeta del workspace (C:\\Sites). "
-                       "Úsala para ver qué existe antes de crear o sobrescribir.",
-        "parameters": {"type": "object", "properties": {
-            "path": {"type": "string", "description": "Ruta relativa (default la raíz del workspace)"},
-        }},
-    }},
-    {"type": "function", "function": {
-        "name": "run_cmd",
-        "description": "Ejecuta un comando de shell en el workspace (C:\\Sites) y devuelve su salida "
-                       "(exit code + stdout/stderr). Úsalo para tareas de dev: instalar deps "
-                       "(pip install), correr un script (python x.py), git, ls, etc. Bloquea "
-                       "comandos destructivos. Preferí comandos no interactivos y de una sola línea.",
-        "parameters": {"type": "object", "properties": {
-            "command": {"type": "string", "description": "El comando de shell a ejecutar"},
-            "timeout": {"type": "integer", "description": "Segundos máx antes de cortar (default 60)"},
-        }, "required": ["command"]},
-    }},
-    {"type": "function", "function": {
-        "name": "use_skill",
-        "description": "Carga el procedimiento paso a paso de una skill (procedimiento reutilizable) "
-                       "para seguirlo. Úsalo cuando la tarea encaje con una skill del catálogo del "
-                       "system prompt, en vez de improvisar el procedimiento.",
-        "parameters": {"type": "object", "properties": {
-            "name": {"type": "string", "description": "Nombre de la skill (ej: nuevo-proyecto-python)"},
-        }, "required": ["name"]},
-    }},
+# Tool schemas: shapes live here (code), human descriptions live in prompts/tools.es.json.
+# Each entry: (name, {param: type}, [required params]).
+_TOOL_SCHEMAS = [
+    ("web_search", {"query": "string", "max_results": "integer"}, ["query"]),
+    ("web_fetch", {"url": "string", "max_chars": "integer"}, ["url"]),
+    ("vault_pull", {}, []),
+    ("vault_recent", {"days": "integer"}, []),
+    ("vault_read", {"path": "string"}, ["path"]),
+    ("write_html", {"filename": "string", "content": "string", "title": "string"},
+     ["filename", "content"]),
+    ("vault_search", {"query": "string", "limit": "integer"}, ["query"]),
+    ("make_dir", {"path": "string"}, ["path"]),
+    ("write_file", {"path": "string", "content": "string"}, ["path", "content"]),
+    ("list_dir", {"path": "string"}, []),
+    ("run_cmd", {"command": "string", "timeout": "integer"}, ["command"]),
+    ("use_skill", {"name": "string"}, ["name"]),
 ]
+
+# Descriptions are externalized (kept in Spanish, the product language) so the code
+# stays language-agnostic. If the file is missing, tools still work (empty descriptions).
+_DESCRIPTIONS = json.loads(prompts.load("tools.es.json", "{}"))
+
+
+def _build_specs():
+    specs = []
+    for name, params, required in _TOOL_SCHEMAS:
+        info = _DESCRIPTIONS.get(name, {})
+        param_desc = info.get("params", {})
+        props = {p: {"type": t, "description": param_desc.get(p, "")} for p, t in params.items()}
+        parameters = {"type": "object", "properties": props}
+        if required:
+            parameters["required"] = required
+        specs.append({"type": "function", "function": {
+            "name": name,
+            "description": info.get("description", ""),
+            "parameters": parameters,
+        }})
+    return specs
+
+
+SPECS = _build_specs()
 
 _IMPLS = {"web_search": web_search, "web_fetch": web_fetch,
           "vault_search": vault_search, "write_html": write_html,

@@ -1,7 +1,12 @@
 """HTTP clients for ollama (local models) and the corpus (vault RAG)."""
 import json
+import logging
+
 import requests
+
 import config
+
+log = logging.getLogger("localagent.clients")
 
 
 # ---------------------------------------------------------------- Ollama
@@ -60,7 +65,7 @@ def context_limit(model):
             if m.get("name") == model and m.get("context_length"):
                 return m["context_length"]
     except Exception:
-        pass
+        log.debug("could not read running context length for %r", model, exc_info=True)
     try:
         info = requests.post(f"{config.OLLAMA_URL}/api/show",
                              json={"model": model}, timeout=8).json().get("model_info", {})
@@ -68,7 +73,7 @@ def context_limit(model):
             if k.endswith(".context_length"):
                 return v
     except Exception:
-        pass
+        log.debug("could not read modelfile context length for %r", model, exc_info=True)
     return None
 
 
@@ -288,4 +293,5 @@ def corpus_ok():
         ).raise_for_status()
         return True
     except Exception:
+        log.debug("corpus health check failed", exc_info=True)
         return False

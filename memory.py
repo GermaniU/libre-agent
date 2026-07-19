@@ -8,12 +8,15 @@ The bridge is a module-level singleton (framework-agnostic) so this layer works 
 under the SPA (FastAPI), the Streamlit UI and the Telegram bot.
 """
 import json
+import logging
 import os
 import re
 import threading
 
 import mcp_bridge
 import prompts
+
+log = logging.getLogger("localagent.memory")
 
 NAMESPACE = "localagent"
 # Which MCP server backs the memory. Must match a name in mcp.json (override via env).
@@ -40,6 +43,7 @@ def _bridge():
             b = mcp_bridge.MCPBridge([_SERVER])
             _bridge_singleton = b if _SEARCH in b.tools else None
         except Exception:
+            log.debug("memory bridge unavailable (server %r)", _SERVER, exc_info=True)
             _bridge_singleton = None
         _bridge_ready = True
         return _bridge_singleton
@@ -63,6 +67,7 @@ def recall(query, k=4, min_score=0.35):
         data = json.loads(raw)
         items = data.get("result", []) if isinstance(data, dict) else data
     except Exception:
+        log.debug("memory recall failed for query %r", query, exc_info=True)
         return []
     out = []
     for item in items:
@@ -88,6 +93,7 @@ def remember(content, tags=None):
                              "tags": tags or ["localagent"]}, timeout=20)
         return not str(res).startswith("Error del tool")
     except Exception:
+        log.debug("memory save failed", exc_info=True)
         return False
 
 
@@ -106,6 +112,7 @@ def remember_from_exchange(user_msg, assistant_msg, extractor_model):
             extractor_model, [{"role": "user", "content": prompt}],
             temperature=0.2, use_tools=False, think=False)
     except Exception:
+        log.debug("memory extraction call failed", exc_info=True)
         return []
     if not raw or raw.strip().upper().startswith("NADA"):
         return []

@@ -4,6 +4,7 @@ Does not replace the agent logic: it delegates everything to agent.py, clients.p
 store.py, memory.py, trace.py, etc. It only adds an HTTP layer + a static frontend.
 """
 import json
+import logging
 import os
 import re
 import time
@@ -20,6 +21,13 @@ import config
 import mcp_bridge
 import skills
 import store
+
+# Entry point: configure logging once (LOG_LEVEL env overrides; default INFO).
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+log = logging.getLogger("localagent.api")
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 _WEB_DIR = os.path.join(_DIR, "web")
@@ -127,6 +135,7 @@ def _mcp_cfg():
         with open(mcp_bridge.CONFIG_PATH, encoding="utf-8") as f:
             cfg = json.load(f)
     except Exception:
+        log.debug("no readable mcp.json at %s", mcp_bridge.CONFIG_PATH, exc_info=True)
         cfg = {}
     cfg.setdefault("mcpServers", {})
     return cfg
@@ -339,7 +348,7 @@ def chat(req: ChatRequest):
                 try:
                     bridge.close()
                 except Exception:
-                    pass
+                    log.debug("error closing MCP bridge after turn", exc_info=True)
 
         idx = len(sess["messages"])
         sess["messages"].append({"role": "assistant", "content": reply})
@@ -358,7 +367,7 @@ def chat(req: ChatRequest):
             if saved_facts:
                 sess.setdefault("mem", {})[str(idx)] = saved_facts
         except Exception:
-            pass
+            log.warning("post-turn finalize (memory/trace) failed", exc_info=True)
 
         store.save_session(sess_name, sess)
 

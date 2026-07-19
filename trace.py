@@ -5,8 +5,11 @@ tokens, time and errors. Meant for `tail -f`, `grep`, or the sidebar viewer.
 """
 import datetime
 import json
+import logging
 import os
 import threading
+
+_logger = logging.getLogger("localagent.trace")  # not 'log': this module exports log()
 
 LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trace.jsonl")
 _lock = threading.Lock()
@@ -20,7 +23,7 @@ def log(event, **fields):
         with _lock, open(LOG, "a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     except Exception:
-        pass
+        _logger.debug("could not append trace event", exc_info=True)
 
 
 def recent(n=10):
@@ -30,4 +33,5 @@ def recent(n=10):
             lines = f.readlines()[-n:]
         return [json.loads(x) for x in lines if x.strip()]
     except Exception:
+        _logger.debug("could not read trace", exc_info=True)
         return []

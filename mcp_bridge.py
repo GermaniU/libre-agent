@@ -8,10 +8,13 @@ Each tool is namespaced as  <server>__<tool>  to avoid clashing between servers.
 """
 import asyncio
 import json
+import logging
 import os
 import re
 import threading
 from contextlib import AsyncExitStack
+
+log = logging.getLogger("localagent.mcp")
 
 CONFIG_PATH = os.getenv(
     "MCP_CONFIG",
@@ -25,6 +28,7 @@ def list_configured_servers():
         with open(CONFIG_PATH) as f:
             return sorted(json.load(f).get("mcpServers", {}).keys())
     except Exception:
+        log.debug("could not read mcp config at %s", CONFIG_PATH, exc_info=True)
         return []
 
 
@@ -89,7 +93,7 @@ class MCPBridge:
         try:
             self._run(self._stack.aclose(), timeout=15)
         except Exception:
-            pass
+            log.debug("error closing MCP bridge", exc_info=True)
 
     def call(self, qname, args, timeout=300):
         sess, tool = self.tools[qname]

@@ -4,10 +4,13 @@ Each 'space' (chat session) is stored as a JSON blob keyed by name.
 Deliberately lightweight: open/close connection per call + lock for Streamlit reruns.
 """
 import json
+import logging
 import os
 import sqlite3
 import threading
 import time
+
+log = logging.getLogger("localagent.store")
 
 DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "localagent.db")
 _lock = threading.Lock()
@@ -26,13 +29,14 @@ def load_sessions():
         with _lock, _conn() as c:
             rows = c.execute("SELECT name, data FROM sessions ORDER BY updated").fetchall()
     except Exception:
+        log.warning("could not load sessions from %s", DB, exc_info=True)
         return {}
     out = {}
     for name, data in rows:
         try:
             out[name] = json.loads(data)
         except Exception:
-            pass
+            log.warning("skipping corrupt session %r", name, exc_info=True)
     return out
 
 
@@ -44,7 +48,7 @@ def save_session(name, session):
                       (name, json.dumps(session, ensure_ascii=False), time.time()))
             c.commit()
     except Exception:
-        pass
+        log.warning("could not save session %r — changes may be lost", name, exc_info=True)
 
 
 def delete_session(name):
@@ -53,7 +57,7 @@ def delete_session(name):
             c.execute("DELETE FROM sessions WHERE name=?", (name,))
             c.commit()
     except Exception:
-        pass
+        log.warning("could not delete session %r", name, exc_info=True)
 
 
 def rename_session(old, new):
@@ -66,4 +70,5 @@ def rename_session(old, new):
             c.commit()
             return True
     except Exception:
+        log.warning("could not rename session %r -> %r", old, new, exc_info=True)
         return False

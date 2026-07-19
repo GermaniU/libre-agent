@@ -4,8 +4,11 @@ Each skill is a .md in skills/ with frontmatter (name, description) + the proced
 The catalog (name+description) goes into the system prompt; the model calls use_skill("name")
 to load the step-by-step and follow it. Claude Code style, but lightweight.
 """
+import logging
 import os
 import re
+
+log = logging.getLogger("localagent.skills")
 
 SKILLS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skills")
 
@@ -41,7 +44,7 @@ def _all():
                 n, d, b = _parse(f.read())
             out.append((n or fn[:-3], d or "", b))
         except Exception:
-            pass
+            log.debug("could not read skill %r", fn, exc_info=True)
     return out
 
 

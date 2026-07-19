@@ -1,0 +1,79 @@
+{
+  "web_search": {
+    "description": "Busca en la web (DuckDuckGo). Úsala para info actual o externa al vault.",
+    "params": {
+      "query": "Términos de búsqueda",
+      "max_results": "Cantidad de resultados (default 5)"
+    }
+  },
+  "web_fetch": {
+    "description": "Descarga una URL y devuelve su texto. Úsala para leer un resultado de web_search.",
+    "params": {
+      "url": "URL completa (http/https)",
+      "max_chars": "Máximo de caracteres (default 5000)"
+    }
+  },
+  "vault_pull": {
+    "description": "Actualiza el vault físico con git pull. Usala antes de vault_recent si el usuario pregunta por trabajo muy reciente.",
+    "params": {}
+  },
+  "vault_recent": {
+    "description": "Qué trabajó el usuario últimamente: lista notas modificadas y devuelve las daily notes de los últimos N días.",
+    "params": {
+      "days": "Días hacia atrás (default 7)"
+    }
+  },
+  "vault_read": {
+    "description": "Lee una nota completa del vault por ruta relativa, ej: 'Daily Notes/2026-07-10.md'.",
+    "params": {
+      "path": "Ruta relativa dentro del vault"
+    }
+  },
+  "write_html": {
+    "description": "Guarda una página HTML y devuelve la URL para abrirla en el navegador. Úsala cuando el usuario pida un documento, reporte, tabla o página visual. Pasá el HTML completo del body (CSS inline permitido).",
+    "params": {
+      "filename": "Nombre del archivo, ej: reporte-ventas",
+      "content": "El HTML completo de la página",
+      "title": "Título de la pestaña"
+    }
+  },
+  "vault_search": {
+    "description": "Busca en las notas personales del vault del usuario (Obsidian). Úsala para preguntas sobre sus notas, libros o proyectos.",
+    "params": {
+      "query": "Búsqueda semántica",
+      "limit": "Cantidad de pasajes (default 6)"
+    }
+  },
+  "make_dir": {
+    "description": "Crea una carpeta (y sus padres) para un proyecto nuevo dentro de C:\\Sites. Úsala al iniciar un proyecto, ej: 'mi-scraper' o 'mi-scraper/src'.",
+    "params": {
+      "path": "Ruta relativa dentro del workspace"
+    }
+  },
+  "write_file": {
+    "description": "Escribe un archivo de texto (script Python, HTML, requirements.txt, README, config, etc.) dentro de C:\\Sites, creando carpetas padre si faltan. Úsala para materializar el código de un proyecto que el usuario luego ejecuta a mano.",
+    "params": {
+      "path": "Ruta relativa, ej: 'mi-scraper/main.py'",
+      "content": "Contenido completo del archivo"
+    }
+  },
+  "list_dir": {
+    "description": "Lista el contenido de una carpeta del workspace (C:\\Sites). Úsala para ver qué existe antes de crear o sobrescribir.",
+    "params": {
+      "path": "Ruta relativa (default la raíz del workspace)"
+    }
+  },
+  "run_cmd": {
+    "description": "Ejecuta un comando de shell en el workspace (C:\\Sites) y devuelve su salida (exit code + stdout/stderr). Úsalo para tareas de dev: instalar deps (pip install), correr un script (python x.py), git, ls, etc. Bloquea comandos destructivos. Preferí comandos no interactivos y de una sola línea.",
+    "params": {
+      "command": "El comando de shell a ejecutar",
+      "timeout": "Segundos máx antes de cortar (default 60)"
+    }
+  },
+  "use_skill": {
+    "description": "Carga el procedimiento paso a paso de una skill (procedimiento reutilizable) para seguirlo. Úsalo cuando la tarea encaje con una skill del catálogo del system prompt, en vez de improvisar el procedimiento.",
+    "params": {
+      "name": "Nombre de la skill (ej: nuevo-proyecto-python)"
+    }
+  }
+}

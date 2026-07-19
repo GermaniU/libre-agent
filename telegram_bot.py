@@ -4,6 +4,7 @@ Commands: /status /model /ctx /new /mcp /help. Any other text goes to the model
 (same soul and tools as the web UI). Only responds to the user in TELEGRAM_ALLOWED_USER.
 Token and allowlist in .env (never committed anywhere).
 """
+import logging
 import os
 import re
 import subprocess
@@ -16,6 +17,13 @@ import agent
 import clients
 import config
 import mcp_bridge
+
+# Entry point: configure logging once (LOG_LEVEL env overrides; default INFO).
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+log = logging.getLogger("localagent.telegram")
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 
