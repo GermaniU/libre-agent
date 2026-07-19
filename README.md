@@ -298,6 +298,13 @@ Los PRs son bienvenidos. La idea es que el código siga siendo **legible**: camb
 enfocados, sin dependencias de más, en el mismo estilo del módulo que tocas. Para algo
 grande, abre un issue primero y lo charlamos.
 
+### Contribuidores
+
+- **[@GermaniU](https://github.com/GermaniU)** — autor y mantenedor.
+- **Revisión de código con modelos cloud de ollama** — parte del código pasó por
+  revisiones asistidas por **Kimi K2**, **GLM-5.2** y **DeepSeek V4-Pro** (vía `ollama`
+  cloud), que ayudaron a detectar bugs y a pulir el diseño.
+
 ---
 
 ## ☕ Apoyar
