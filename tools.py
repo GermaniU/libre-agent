@@ -220,6 +220,29 @@ def list_dir(path="."):
                      for e in entries)
 
 
+def read_file(path, max_chars=10000):
+    """Read a text file inside the workspace and return its content (truncated).
+
+    The read-only counterpart of write_file: lets the model inspect what it (or the
+    user) wrote before overwriting or modifying it. Confined to WORKSPACE_DIR via
+    _in_workspace (same anti-traversal guard as the other filesystem tools).
+    """
+    import os
+    full, err = _in_workspace(path)
+    if err:
+        return err
+    if not os.path.exists(full):
+        return f"No existe: {path}"
+    if os.path.isdir(full):
+        return f"Es una carpeta, no un archivo: {path}"
+    try:
+        with open(full, encoding="utf-8", errors="replace") as f:
+            content = f.read()
+    except Exception as e:
+        return f"Error leyendo {path}: {e}"
+    return content[: int(max_chars)] or "(archivo vacío)"
+
+
 # clearly destructive patterns → always blocked (defense, not exhaustive)
 _BLOCKED_CMD = re.compile(
     r"\brm\s+-rf?\s+(/|~|\$HOME|\*)"          # rm -rf of root/home/everything
@@ -275,6 +298,7 @@ _TOOL_SCHEMAS = [
     ("vault_search", {"query": "string", "limit": "integer"}, ["query"]),
     ("make_dir", {"path": "string"}, ["path"]),
     ("write_file", {"path": "string", "content": "string"}, ["path", "content"]),
+    ("read_file", {"path": "string", "max_chars": "integer"}, ["path"]),
     ("list_dir", {"path": "string"}, []),
     ("run_cmd", {"command": "string", "timeout": "integer"}, ["command"]),
     ("use_skill", {"name": "string"}, ["name"]),
@@ -307,8 +331,8 @@ SPECS = _build_specs()
 _IMPLS = {"web_search": web_search, "web_fetch": web_fetch,
           "vault_search": vault_search, "write_html": write_html,
           "vault_pull": vault_pull, "vault_recent": vault_recent, "vault_read": vault_read,
-          "make_dir": make_dir, "write_file": write_file, "list_dir": list_dir,
-          "run_cmd": run_cmd, "use_skill": use_skill}
+          "make_dir": make_dir, "write_file": write_file, "read_file": read_file,
+          "list_dir": list_dir, "run_cmd": run_cmd, "use_skill": use_skill}
 
 
 def execute(name, args):

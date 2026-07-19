@@ -57,6 +57,13 @@
       "content": "Contenido completo del archivo"
     }
   },
+  "read_file": {
+    "description": "Lee el contenido de un archivo de texto del workspace (C:\\Sites). Úsala para revisar lo que escribiste o leer un archivo existente antes de modificarlo. No lee archivos binarios.",
+    "params": {
+      "path": "Ruta relativa dentro del workspace",
+      "max_chars": "Máximo de caracteres a devolver (default 10000)"
+    }
+  },
   "list_dir": {
     "description": "Lista el contenido de una carpeta del workspace (C:\\Sites). Úsala para ver qué existe antes de crear o sobrescribir.",
     "params": {

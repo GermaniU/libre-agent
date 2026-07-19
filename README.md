@@ -149,7 +149,7 @@ Ver `mcp.json.example`. El `mcp.json` está git-ignored (puede llevar claves en 
 | **Thinking** | razonamiento extendido (solo en modelos que lo soportan) |
 | **Memoria** | recordar hechos entre chats vía mcp-memory (auto-recall + auto-save) |
 | **MCP** | cualquier tool de los servidores declarados en `mcp.json` (editor genérico + importar bloque) |
-| **Filesystem / Shell** | crear proyectos y correr comandos, confinado a `WORKSPACE_DIR` |
+| **Filesystem / Shell** | leer, crear proyectos y correr comandos, confinado a `WORKSPACE_DIR` |
 | **Contexto** | **Nuevo** + **Compactar** (resume la conversación para liberar contexto) + auto-compact al 85% |
 | **Backend llama.cpp** | usar modelos de `llama-server` (MTP, cuantizaciones exóticas) junto a ollama — [docs](docs/llama-cpp.md) |
 
