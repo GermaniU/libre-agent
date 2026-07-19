@@ -1,6 +1,24 @@
 """Central LocalAgent configuration. Everything overridable via environment variable."""
 import os
 
+
+def _load_dotenv():
+    """Load .env (never committed) so local config/secrets reach the app. Minimal loader,
+    no dependency: KEY=VALUE lines, '#' comments ignored, real env vars win."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    if not os.path.exists(path):
+        return
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip())
+
+
+_load_dotenv()
+
 # --- Endpoints (all on your LAN, zero cloud) ---
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 CORPUS_URL = os.getenv("CORPUS_URL", "http://localhost:5099/api")  # optional: your own corpus/RAG server
@@ -24,6 +42,9 @@ EMBED_HINT = ("embed", "nomic")
 VISION_HINT = ("vl", "llava", "vision")
 
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "llama3.2")  # the UI auto-picks the first available if you don't have it
+# Fallback context window when the backend can't report one (e.g. llama.cpp models,
+# unknown to ollama). The A3B server runs at 32k, so that's a sane default.
+DEFAULT_CTX = int(os.getenv("DEFAULT_CTX", "32768"))
 DEFAULT_TOPK = int(os.getenv("RAG_TOPK", "6"))
 
 # Max chars per MCP tool description sent to the model. Lower it (e.g. 250) to shrink the

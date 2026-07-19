@@ -139,7 +139,7 @@ def context_limit(model):
                 return v
     except Exception:
         log.debug("could not read modelfile context length for %r", model, exc_info=True)
-    return None
+    return config.DEFAULT_CTX  # backend didn't report one (e.g. llama.cpp) -> sane default
 
 
 def _ctx_estimate(msgs, measured):
