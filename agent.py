@@ -90,6 +90,8 @@ def run_turn(model, history, prompt, soul, *, channel="web", temperature=0.4,
                     use_tools=use_tools, think=think, options=options):
                 if kind == "token":
                     yield {"type": "token", "token": pl}
+                elif kind == "think":
+                    yield {"type": "think", "token": pl}
                 elif kind == "tool":
                     name, args = pl
                     yield {"type": "tool", "name": name, "args": args}

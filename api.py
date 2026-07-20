@@ -127,8 +127,9 @@ def rename_session(old: str, req: RenameRequest):
 
 class McpAdd(BaseModel):
     name: str
-    target: str  # http(s) URL -> http server; anything else -> stdio command
-    token: str | None = None  # optional: bearer auth for remote (http) servers, else stdio env
+    target: str | None = None  # http(s) URL -> http server; anything else -> stdio command
+    token: str | None = None   # optional: bearer auth for remote (http) servers, else stdio env
+    config: dict | None = None  # full server config dict (from the structured form); wins over target
 
 
 class McpEdit(BaseModel):
@@ -200,22 +201,28 @@ def list_mcps():
 @app.post("/api/mcps")
 def add_mcp(req: McpAdd):
     name = req.name.strip()
-    target = req.target.strip()
     if not re.match(r"^[a-zA-Z0-9_-]{1,60}$", name):
         raise HTTPException(status_code=400, detail="Nombre inválido: usa letras, números, - o _")
-    if not target:
-        raise HTTPException(status_code=400, detail="Falta la URL o el comando")
     cfg = _mcp_cfg()
     if name in cfg["mcpServers"]:
         raise HTTPException(status_code=409, detail=f"Ya existe un MCP llamado '{name}'")
-    server = _mcp_server_from_target(target)
-    token = (req.token or "").strip()
-    if token:
-        # remote (http): bearer header; local (stdio): env var. Optional/nullable.
-        if server.get("type") == "http" or "url" in server:
-            server["headers"] = {"Authorization": f"Bearer {token}"}
-        else:
-            server.setdefault("env", {})["API_TOKEN"] = token
+    if req.config is not None:
+        # structured form: full config dict, stored verbatim
+        if not isinstance(req.config, dict) or not req.config:
+            raise HTTPException(status_code=400, detail="La config debe ser un objeto JSON no vacío")
+        server = req.config
+    else:
+        target = (req.target or "").strip()
+        if not target:
+            raise HTTPException(status_code=400, detail="Falta la URL o el comando")
+        server = _mcp_server_from_target(target)
+        token = (req.token or "").strip()
+        if token:
+            # remote (http): bearer header; local (stdio): env var. Optional/nullable.
+            if server.get("type") == "http" or "url" in server:
+                server["headers"] = {"Authorization": f"Bearer {token}"}
+            else:
+                server.setdefault("env", {})["API_TOKEN"] = token
     cfg["mcpServers"][name] = server
     _mcp_save(cfg)
     return {"ok": True, "servers": list(cfg["mcpServers"].keys()), "configs": _mcp_view(cfg)}
@@ -429,6 +436,8 @@ def chat(req: ChatRequest):
                     yield _event("recall", {"count": ev["count"], "facts": ev["facts"]})
                 elif t == "token":
                     yield _event("token", {"token": ev["token"]})
+                elif t == "think":
+                    yield _event("think", {"token": ev["token"]})
                 elif t == "tool":
                     yield _event("tool", {"name": ev["name"], "args": ev["args"]})
                 elif t == "error":

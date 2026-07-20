@@ -265,7 +265,7 @@ def _openai_stream(base, model, messages, temperature=0.4, options=None, think=N
                 rtok = delta.get("reasoning_content")
                 if rtok:
                     reasoning.append(rtok)
-                    yield ("token", rtok)
+                    yield ("think", rtok)  # separate channel: collapsible reasoning in the UI
                 token = delta.get("content")
                 if token:
                     parts.append(token)
@@ -481,6 +481,9 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
             if data.get("error"):
                 raise RuntimeError(f"Ollama: {data['error']}")
             msg = data.get("message", {})
+            think_tok = msg.get("thinking")  # ollama puts reasoning here when think=True
+            if think_tok:
+                yield ("think", think_tok)
             tok = msg.get("content", "")
             if tok:
                 content_parts.append(tok)

@@ -43,11 +43,12 @@ const state = {
   thinkOpen: {}, // msgIndex -> bool
   callsOpen: null,
   soulDraft: '',
-  mcpNew: { name: '', target: '', token: '' },
   mcpError: null,
   mcpConfigs: [],      // [{name, type, target, env_keys, raw}]
-  mcpEditing: null,    // name of the server being edited
-  mcpEditVal: '',
+  mcpEditing: null,    // name of the server being edited (null = none)
+  mcpAdding: false,    // showing the "new server" form
+  // structured MCP form (shared by add + edit)
+  mcpForm: { type: 'stdio', name: '', command: '', args: '', url: '', env: [], showJson: false, jsonText: '' },
   mcpImportText: '',
 };
 
@@ -543,7 +544,7 @@ function renderMessage(m, idx, sess) {
   const calls = (sess.tools || {})[String(idx)] || [];
   const mems = (sess.mem || {})[String(idx)] || [];
   const meta = m.meta;
-  const showThink = m.think && (m.thinkOpen || state.thinkOpen[idx]);
+  const showThink = m.think && (m.thinkOpen || state.thinkOpen[idx] || (m.streaming && m.phase === 'think'));
   const body = mdToHtml(m.content);
   const copyId = 'copy-' + idx;
   return `
@@ -571,7 +572,7 @@ function renderMessage(m, idx, sess) {
           ${m.streaming && m.phase === 'think' ? 'Razonando…' : 'Razonamiento'}
           <svg class="svg-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;transition:transform .15s;transform:${showThink ? 'rotate(180deg)' : 'none'}"><path d="M6 9l6 6 6-6"></path></svg>
         </button>
-        ${showThink ? `<div style="margin-top:7px;padding-top:8px;border-top:1px dashed var(--bd);font-size:13px;line-height:1.6;color:var(--tx3)">${esc(m.think)}</div>` : ''}
+        ${showThink ? `<div ${m.streaming ? 'id="stream-think"' : ''} style="margin-top:7px;padding-top:8px;border-top:1px dashed var(--bd);font-size:13px;line-height:1.6;color:var(--tx3);white-space:pre-wrap">${esc(m.think)}</div>` : ''}
       </div>
     ` : ''}
     ${m.streaming && !m.content && !m.think ? `
@@ -582,7 +583,7 @@ function renderMessage(m, idx, sess) {
       </div>
     ` : ''}
     ${m.content ? `
-      <div class="msg-text" style="font-size:15px;line-height:1.65;color:var(--tx)">${body}${m.streaming ? '<span style="display:inline-block;width:8px;height:16px;background:var(--ac);border-radius:2px;margin-left:3px;vertical-align:text-bottom;animation:lcCursor .9s steps(1) infinite"></span>' : ''}</div>
+      <div class="msg-text" ${m.streaming ? 'id="stream-content"' : ''} style="font-size:15px;line-height:1.65;color:var(--tx)">${body}${m.streaming ? STREAM_CURSOR : ''}</div>
     ` : ''}
     ${calls.length ? `
       <div style="border:1px solid var(--bd);border-radius:10px;background:var(--bg1);overflow:hidden">
@@ -822,6 +823,73 @@ function renderCfgGeneral() {
   </div>`;
 }
 
+// Structured MCP form (add or edit). Matches the design: stdio|http toggle,
+// Comando+Argumentos (stdio) or URL (http), env/headers key-value pairs, Pegar JSON.
+function renderMcpForm(isEdit) {
+  const f = state.mcpForm;
+  const nameOk = !f.name.trim() || /^[a-zA-Z0-9_-]{1,60}$/.test(f.name.trim());
+  const isHttp = f.type === 'http';
+  const targetOk = isHttp ? /^https?:\/\//i.test(f.url.trim()) : !!f.command.trim();
+  const canSave = !!f.name.trim() && /^[a-zA-Z0-9_-]{1,60}$/.test(f.name.trim()) && targetOk;
+  const lbl = 'font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:4px;display:block';
+  const req = '<span style="color:var(--ac)" title="obligatorio">*</span>';
+  const inp = (b) => `width:100%;height:34px;border:1px solid ${b || 'var(--bd)'};border-radius:8px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:0 10px`;
+  const seg = (t, on) => `<button data-action="mcpType" data-type="${t}" style="height:28px;padding:0 14px;border:none;border-radius:7px;background:${on ? 'var(--ac)' : 'transparent'};color:${on ? '#fff' : 'var(--tx3)'};font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;cursor:pointer">${t}</button>`;
+  return `
+    <div style="border-top:1px solid var(--bd);padding:12px;display:flex;flex-direction:column;gap:11px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;gap:2px;background:var(--bg1);border:1px solid var(--bd);border-radius:9px;padding:2px">${seg('stdio', !isHttp)}${seg('http', isHttp)}</div>
+        <div style="flex:1"></div>
+        <button data-action="mcpTogglePasteJson" style="height:28px;padding:0 12px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx3);font-family:inherit;font-size:12px;cursor:pointer">${f.showJson ? 'Usar campos' : 'Pegar JSON'}</button>
+      </div>
+      ${f.showJson ? `
+        <div>
+          <span style="${lbl}">Config JSON del server</span>
+          <textarea data-input="mcpJson" rows="6" spellcheck="false" placeholder='{"command":"npx","args":["-y","algo"],"env":{"CLAVE":"valor"}}' style="width:100%;border:1px solid var(--bd);border-radius:8px;background:var(--bg1);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 10px;resize:vertical">${esc(f.jsonText)}</textarea>
+        </div>
+      ` : `
+        <div>
+          <span style="${lbl}">Nombre ${req}</span>
+          <input data-input="mcpFName" ${isEdit ? 'disabled' : ''} value="${esc(f.name)}" placeholder="p. ej. taskflow-mcp" style="${inp(nameOk ? '' : 'var(--err)')}${isEdit ? ';opacity:.6' : ''}">
+          ${!nameOk ? '<span style="font-size:10.5px;color:var(--err);margin-top:3px;display:block">Solo letras, números, - y _ (máx 60)</span>' : ''}
+        </div>
+        ${isHttp ? `
+          <div>
+            <span style="${lbl}">URL ${req}</span>
+            <input data-input="mcpFUrl" value="${esc(f.url)}" placeholder="http://host:puerto/mcp" style="${inp(f.url.trim() && !targetOk ? 'var(--err)' : '')}">
+          </div>
+        ` : `
+          <div style="display:flex;gap:8px">
+            <div style="flex:0 0 40%"><span style="${lbl}">Comando ${req}</span>
+              <input data-input="mcpFCommand" value="${esc(f.command)}" placeholder="npx / node / uvx" style="${inp()}"></div>
+            <div style="flex:1"><span style="${lbl}">Argumentos</span>
+              <input data-input="mcpFArgs" value="${esc(f.args)}" placeholder="/ruta/al/server/dist/index.js" style="${inp()}"></div>
+          </div>
+        `}
+        <div>
+          <span style="${lbl}">${isHttp ? 'Headers' : 'Variables de entorno'} <span style="font-weight:400;color:var(--tx3)">se guardan en mcp.json local, nunca salen de tu máquina</span></span>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${(f.env || []).map((e, i) => `
+              <div style="display:flex;gap:6px;align-items:center">
+                <input data-input="mcpEnvK" data-idx="${i}" value="${esc(e.k)}" placeholder="CLAVE" style="${inp()};flex:0 0 38%">
+                <input data-input="mcpEnvV" data-idx="${i}" type="${e.show ? 'text' : 'password'}" value="${esc(e.v)}" placeholder="valor" style="${inp()};flex:1">
+                <button data-action="mcpEnvShow" data-idx="${i}" aria-label="Ver/ocultar valor" style="width:30px;height:30px;flex:none;border:1px solid var(--bd);border-radius:7px;background:transparent;color:var(--tx3);cursor:pointer">${e.show ? '🙈' : '👁'}</button>
+                <button data-action="mcpEnvDel" data-idx="${i}" aria-label="Quitar variable" style="width:30px;height:30px;flex:none;border:1px solid var(--bd);border-radius:7px;background:transparent;color:var(--tx3);cursor:pointer">✕</button>
+              </div>
+            `).join('')}
+            <button data-action="mcpEnvAdd" style="align-self:flex-start;height:28px;padding:0 12px;border:1px dashed var(--bd2);border-radius:8px;background:transparent;color:var(--tx2);font-family:inherit;font-size:12px;cursor:pointer">+ Variable</button>
+          </div>
+        </div>
+      `}
+      ${state.mcpError ? `<div style="font-size:12px;color:var(--err)">${esc(state.mcpError)}</div>` : ''}
+      <div style="display:flex;align-items:center;gap:8px">
+        <button data-action="saveMcpForm" ${canSave || f.showJson ? '' : 'disabled'} style="height:30px;padding:0 16px;border:none;border-radius:8px;background:${canSave || f.showJson ? 'var(--ac)' : 'var(--bg3)'};color:${canSave || f.showJson ? '#fff' : 'var(--tx3)'};font-family:inherit;font-size:12px;font-weight:600;cursor:${canSave || f.showJson ? 'pointer' : 'default'}">Guardar</button>
+        <button data-action="cancelMcpForm" style="height:30px;padding:0 12px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx3);font-family:inherit;font-size:12px;cursor:pointer">Cancelar</button>
+        <span style="font-size:11px;color:var(--tx3);margin-left:auto">Guardar reinicia el server y redescubre sus tools</span>
+      </div>
+    </div>`;
+}
+
 function renderCfgMcp() {
   return `
   <div style="display:flex;flex-direction:column;gap:10px">
@@ -830,13 +898,14 @@ function renderCfgMcp() {
       const on = state.selectedMcps.includes(name);
       const conf = state.mcpConfigs.find(c => c.name === name) || { type: '?', target: '', env_keys: [] };
       const editing = state.mcpEditing === name;
+      const nEnv = (conf.env_keys || []).length;
       return `
       <div style="border:1px solid ${editing ? 'var(--ac)' : 'var(--bd)'};border-radius:10px;background:var(--bg2);overflow:hidden">
         <div style="display:flex;align-items:center;gap:10px;padding:10px 12px">
           <span style="width:7px;height:7px;border-radius:50%;background:${on ? 'var(--ok)' : 'var(--tx3)'};flex:none"></span>
           <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:500;font-family:'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</div>
-            <div style="font-size:11px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(conf.type)} · ${esc(conf.target) || '(sin destino)'}${conf.env_keys.length ? ` · env: ${esc(conf.env_keys.join(', '))}` : ''}</div>
+            <div style="font-size:13px;font-weight:600;font-family:'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}${nEnv ? ` <span style="font-weight:400;font-size:10px;color:var(--tx3);background:var(--bg3);border-radius:5px;padding:1px 6px">${nEnv} env</span>` : ''}</div>
+            <div style="font-size:11px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(conf.type)} · ${esc(conf.target) || '(sin destino)'}</div>
           </div>
           <button data-action="editMcp" data-name="${esc(name)}" aria-label="Editar ${esc(name)}" title="Ver / editar configuración" style="width:28px;height:28px;border:none;background:transparent;color:${editing ? 'var(--ac)' : 'var(--tx3)'};border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none">
             <svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5z"></path></svg>
@@ -848,57 +917,21 @@ function renderCfgMcp() {
             <svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"></path></svg>
           </button>
         </div>
-        ${editing ? `
-          <div style="border-top:1px solid var(--bd);padding:10px 12px;display:flex;flex-direction:column;gap:8px">
-            <span style="font-size:11.5px;color:var(--tx3)">Config JSON completa del server (incluye env con sus valores).</span>
-            <textarea data-input="mcpEdit" rows="8" spellcheck="false" style="width:100%;border:1px solid var(--bd);border-radius:8px;background:var(--bg1);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:8px 10px;resize:vertical">${esc(state.mcpEditVal)}</textarea>
-            ${state.mcpError ? `<div style="font-size:12px;color:var(--err)">${esc(state.mcpError)}</div>` : ''}
-            <div style="display:flex;gap:8px">
-              <button data-action="saveMcp" data-name="${esc(name)}" style="height:30px;padding:0 14px;border:none;border-radius:8px;background:var(--ac);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">Guardar</button>
-              <button data-action="cancelMcp" style="height:30px;padding:0 12px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx3);font-family:inherit;font-size:12px;cursor:pointer">Cancelar</button>
-            </div>
-          </div>
-        ` : ''}
+        ${editing ? renderMcpForm(true) : ''}
       </div>`;
     }).join('') || '<div style="font-size:13px;color:var(--tx3)">No hay MCPs configurados.</div>'}
-    ${(() => {
-      const nm = (state.mcpNew?.name || '').trim();
-      const tg = (state.mcpNew?.target || '').trim();
-      const nameOk = !nm || /^[a-zA-Z0-9_-]{1,60}$/.test(nm);
-      const isUrl = /^https?:\/\//i.test(tg);
-      const addOk = !!nm && !!tg && /^[a-zA-Z0-9_-]{1,60}$/.test(nm);
-      const req = '<span style="color:var(--ac);font-weight:700" title="obligatorio">*</span>';
-      const opt = '<span style="color:var(--tx3);font-weight:400">· opcional</span>';
-      const lbl = 'font-size:11px;color:var(--tx3);display:flex;flex-direction:column;gap:4px';
-      const inp = (border) => `width:100%;height:34px;border:1px solid ${border};border-radius:8px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:0 10px`;
-      const hint = 'font-size:10.5px;color:var(--tx3);line-height:1.4';
-      return `
-    <div style="border:1px dashed var(--bd2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:9px">
-      <div style="font-size:12px;font-weight:600;color:var(--tx2)">Agregar servidor</div>
-      <label style="${lbl}">Nombre ${req}
-        <input data-input="mcpName" value="${esc(state.mcpNew?.name || '')}" placeholder="agentic-memory-mcp" style="${inp(nameOk ? 'var(--bd)' : 'var(--err)')}">
-        ${!nameOk ? '<span style="font-size:10.5px;color:var(--err)">Solo letras, números, - y _ (máx 60)</span>' : ''}
-      </label>
-      <label style="${lbl}">URL o comando ${req}
-        <input data-input="mcpTarget" value="${esc(state.mcpNew?.target || '')}" placeholder="http://host:puerto/mcp   ó   npx -y paquete" style="${inp('var(--bd)')}">
-        <span style="${hint}">${tg ? (isUrl ? '→ Server remoto (http)' : '→ Server local (stdio): comando + argumentos') : 'http(s)://… para remotos · comando args… para locales'}</span>
-      </label>
-      <label style="${lbl}">Token ${opt}
-        <input data-input="mcpToken" value="${esc(state.mcpNew?.token || '')}" placeholder="(dejalo vacío si no necesita auth)" style="${inp('var(--bd)')}">
-        <span style="${hint}">Nulleable. Solo para servers remotos con auth — se envía como <code style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--bg3);border-radius:4px;padding:0 4px">Authorization: Bearer</code>.</span>
-      </label>
-      ${state.mcpError && !state.mcpEditing ? `<div style="font-size:12px;color:var(--err)">${esc(state.mcpError)}</div>` : ''}
-      <div style="font-size:11px;color:var(--tx2);line-height:1.5;background:var(--acbg);border-radius:7px;padding:8px 10px">💡 Para que el modelo <strong>use</strong> estos MCPs necesita <strong>Thinking activado</strong> y un modelo de <strong>ollama con soporte de tools</strong> (o Qwen 35B vía llama.cpp). Sin eso se conectan igual, pero el modelo no los llama.</div>
-      <button data-action="addMcp" ${addOk ? '' : 'disabled'} style="height:32px;border:none;border-radius:8px;background:${addOk ? 'var(--ac)' : 'var(--bg3)'};color:${addOk ? '#fff' : 'var(--tx3)'};font-family:inherit;font-size:12.5px;font-weight:600;cursor:${addOk ? 'pointer' : 'default'}">Agregar</button>
-    </div>`;
-    })()}
-    <div style="border:1px dashed var(--bd2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
-      <div style="font-size:12px;font-weight:600;color:var(--tx2)">Importar</div>
-      <div style="font-size:11.5px;color:var(--tx3);line-height:1.5">Pega uno o varios servers (formato <code style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--bg3);border-radius:5px;padding:1px 5px">mcpServers</code> de Claude). Se agregan o reemplazan por nombre.</div>
-      <textarea data-input="mcpImport" rows="6" spellcheck="false" placeholder='{"mcpServers": {"mi-server": {"command": "npx", "args": ["-y", "algo"]}}}' style="width:100%;border:1px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:8px 10px;resize:vertical">${esc(state.mcpImportText)}</textarea>
-      ${state.mcpError && !state.mcpEditing ? `<div style="font-size:12px;color:var(--err)">${esc(state.mcpError)}</div>` : ''}
-      <button data-action="importMcps" style="height:32px;border:none;border-radius:8px;background:var(--ac);color:#fff;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer">Importar</button>
-    </div>
+    ${state.mcpAdding ? `
+      <div style="border:1px solid var(--ac);border-radius:10px;background:var(--bg2);overflow:hidden">
+        <div style="padding:10px 12px;font-size:12px;font-weight:600;color:var(--tx2)">Nuevo servidor MCP</div>
+        ${renderMcpForm(false)}
+      </div>
+    ` : `
+      <button data-action="openAddMcp" style="align-self:flex-start;display:flex;align-items:center;gap:7px;height:34px;padding:0 14px;border:1px dashed var(--bd2);border-radius:10px;background:transparent;color:var(--tx2);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+        Agregar servidor
+      </button>
+    `}
+    <div style="font-size:11px;color:var(--tx2);line-height:1.5;background:var(--acbg);border-radius:8px;padding:9px 11px">💡 Para que el modelo <strong>use</strong> estos MCPs necesita <strong>Thinking activado</strong> y un modelo de <strong>ollama con soporte de tools</strong> (o Qwen 35B vía llama.cpp). Sin eso se conectan igual, pero el modelo no los llama.</div>
   </div>`;
 }
 
@@ -959,23 +992,25 @@ function attachEvents() {
       case 'toggleCollapse': state.collapsedSb = !state.collapsedSb; savePrefs(); render(); break;
       case 'openCfg': state.cfgOpen = true; render(); break;
       case 'openCfgMcp': state.cfgOpen = true; state.cfgTab = 'mcp'; render(); break;
-      case 'addMcp': await addMcp(); break;
       case 'delMcp': await delMcp(btn.dataset.name); break;
+      case 'openAddMcp': mcpFormReset(); state.mcpAdding = true; state.mcpEditing = null; render(); break;
       case 'editMcp': {
         const n = btn.dataset.name;
         if (state.mcpEditing === n) { state.mcpEditing = null; }
-        else {
-          state.mcpEditing = n;
-          const conf = state.mcpConfigs.find(c => c.name === n);
-          state.mcpEditVal = JSON.stringify(conf?.raw ?? {}, null, 2);
-          state.mcpError = null;
-        }
+        else { mcpFormLoad(n); state.mcpEditing = n; state.mcpAdding = false; }
         render();
         break;
       }
-      case 'cancelMcp': state.mcpEditing = null; state.mcpError = null; render(); break;
-      case 'saveMcp': await saveMcp(btn.dataset.name); break;
-      case 'importMcps': await importMcps(); break;
+      case 'cancelMcpForm': state.mcpEditing = null; state.mcpAdding = false; state.mcpError = null; render(); break;
+      case 'saveMcpForm': await saveMcpForm(); break;
+      case 'mcpType': state.mcpForm.type = btn.dataset.type; state.mcpError = null; render(); break;
+      case 'mcpTogglePasteJson':
+        state.mcpForm.showJson = !state.mcpForm.showJson;
+        if (state.mcpForm.showJson && !state.mcpForm.jsonText) state.mcpForm.jsonText = JSON.stringify(mcpFormToConfig(), null, 2);
+        render(); break;
+      case 'mcpEnvAdd': state.mcpForm.env.push({ k: '', v: '', show: false }); render(); break;
+      case 'mcpEnvDel': state.mcpForm.env.splice(+btn.dataset.idx, 1); render(); break;
+      case 'mcpEnvShow': state.mcpForm.env[+btn.dataset.idx].show = !state.mcpForm.env[+btn.dataset.idx].show; render(); break;
       case 'closeCfg': state.cfgOpen = false; state.soulEditing = false; render(); break;
       case 'openMenu':
         e.stopPropagation();
@@ -1081,10 +1116,13 @@ function attachEvents() {
       case 'ctx': state.ctx = t.value; savePrefs(); render(); break;
       case 'sysprompt': state.sysPrompt = t.value; break;
       case 'soul': state.soulDraft = t.value; break;
-      case 'mcpName': state.mcpNew.name = t.value; break;
-      case 'mcpTarget': state.mcpNew.target = t.value; break;
-      case 'mcpToken': state.mcpNew.token = t.value; break;
-      case 'mcpEdit': state.mcpEditVal = t.value; break;
+      case 'mcpFName': state.mcpForm.name = t.value; break;
+      case 'mcpFCommand': state.mcpForm.command = t.value; break;
+      case 'mcpFArgs': state.mcpForm.args = t.value; break;
+      case 'mcpFUrl': state.mcpForm.url = t.value; break;
+      case 'mcpJson': state.mcpForm.jsonText = t.value; break;
+      case 'mcpEnvK': state.mcpForm.env[+t.dataset.idx].k = t.value; break;
+      case 'mcpEnvV': state.mcpForm.env[+t.dataset.idx].v = t.value; break;
       case 'mcpImport': state.mcpImportText = t.value; break;
       case 'rename': state.renameVal = t.value; break;
     }
@@ -1218,56 +1256,90 @@ function selectModel(name) {
   render();
 }
 
-async function addMcp() {
+function mcpFormReset() {
+  state.mcpForm = { type: 'stdio', name: '', command: '', args: '', url: '', env: [], showJson: false, jsonText: '' };
   state.mcpError = null;
-  const name = (state.mcpNew.name || '').trim();
-  const target = (state.mcpNew.target || '').trim();
-  const token = (state.mcpNew.token || '').trim();
-  // client-side validation: name + target son lo obligatorio; token es nulleable
+}
+
+// Populate the structured form from an existing server's raw config (for edit).
+function mcpFormLoad(name) {
+  const conf = state.mcpConfigs.find(c => c.name === name);
+  const raw = conf?.raw || {};
+  const isHttp = raw.type === 'http' || !!raw.url;
+  const envObj = isHttp ? (raw.headers || {}) : (raw.env || {});
+  state.mcpForm = {
+    type: isHttp ? 'http' : 'stdio',
+    name,
+    command: raw.command || '',
+    args: (raw.args || []).join(' '),
+    url: raw.url || '',
+    env: Object.entries(envObj).map(([k, v]) => ({ k, v: String(v), show: false })),
+    showJson: false,
+    jsonText: '',
+  };
+  state.mcpError = null;
+}
+
+// Build the mcp.json server config dict from the structured form fields.
+function mcpFormToConfig() {
+  const f = state.mcpForm;
+  const pairs = {};
+  for (const { k, v } of f.env) { if (k.trim()) pairs[k.trim()] = v; }
+  let cfg;
+  if (f.type === 'http') {
+    cfg = { type: 'http', url: f.url.trim() };
+    if (Object.keys(pairs).length) cfg.headers = pairs;
+  } else {
+    cfg = { command: f.command.trim(), args: f.args.trim() ? f.args.trim().split(/\s+/) : [] };
+    if (Object.keys(pairs).length) cfg.env = pairs;
+  }
+  return cfg;
+}
+
+async function saveMcpForm() {
+  state.mcpError = null;
+  const f = state.mcpForm;
+  const name = f.name.trim();
   if (!/^[a-zA-Z0-9_-]{1,60}$/.test(name)) {
     state.mcpError = 'Nombre inválido: solo letras, números, - y _ (máx 60)';
     return render();
   }
-  if (!target) {
-    state.mcpError = 'Falta la URL (http…) o el comando del server';
-    return render();
-  }
-  try {
-    const r = await apiPost('/api/mcps', { name, target, token: token || null });
-    state.mcpServers = r.servers;
-    state.mcpConfigs = r.configs || [];
-    if (!state.selectedMcps.includes(name)) state.selectedMcps.push(name);
-    localStorage.setItem('la-mcps2', JSON.stringify(state.selectedMcps));
-    state.mcpNew = { name: '', target: '', token: '' };
-  } catch (e) {
-    state.mcpError = e.message.replace(/^\d+: /, '').replace(/^\{"detail":"(.*)"\}$/, '$1');
-  }
-  render();
-}
-
-async function saveMcp(name) {
-  state.mcpError = null;
   let config;
-  try {
-    config = JSON.parse(state.mcpEditVal);
-  } catch (e) {
-    state.mcpError = 'JSON inválido';
-    render();
-    return;
+  if (f.showJson) {
+    try { config = JSON.parse(f.jsonText); }
+    catch { state.mcpError = 'JSON inválido'; return render(); }
+    if (typeof config !== 'object' || Array.isArray(config) || !config) {
+      state.mcpError = 'El JSON debe ser un objeto de config del server'; return render();
+    }
+  } else {
+    config = mcpFormToConfig();
+    if (f.type === 'http' && !/^https?:\/\//i.test(config.url || '')) {
+      state.mcpError = 'La URL debe empezar con http:// o https://'; return render();
+    }
+    if (f.type === 'stdio' && !config.command) {
+      state.mcpError = 'Falta el comando del server'; return render();
+    }
   }
   try {
-    const r = await fetch(`/api/mcps/${encodeURIComponent(name)}`, {
-      method: 'PUT',
+    const editing = state.mcpEditing === name;
+    const r = await fetch(`/api/mcps${editing ? '/' + encodeURIComponent(name) : ''}`, {
+      method: editing ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config }),
+      body: JSON.stringify(editing ? { config } : { name, config }),
     });
     if (!r.ok) throw new Error(await r.text());
     const data = await r.json();
     state.mcpServers = data.servers;
     state.mcpConfigs = data.configs;
+    if (!editing && !state.selectedMcps.includes(name)) {
+      state.selectedMcps.push(name);
+      localStorage.setItem('la-mcps2', JSON.stringify(state.selectedMcps));
+    }
     state.mcpEditing = null;
+    state.mcpAdding = false;
+    mcpFormReset();
   } catch (e) {
-    state.mcpError = e.message.replace(/^\{"detail":"(.*)"\}$/, '$1');
+    state.mcpError = e.message.replace(/^\d+: /, '').replace(/^\{"detail":"(.*)"\}$/, '$1');
   }
   render();
 }
@@ -1509,6 +1581,10 @@ function handleEvent(ev, sess, aiIdx, name) {
   if (!m) return;
   if (ev.type === 'token') {
     m.content += ev.token || '';
+    m.phase = 'answer';
+  } else if (ev.type === 'think') {
+    m.think = (m.think || '') + (ev.token || '');
+    m.phase = 'think';
   } else if (ev.type === 'tool') {
     // we store the tool calls to show at the end
     sess.tools = sess.tools || {};
@@ -1518,7 +1594,8 @@ function handleEvent(ev, sess, aiIdx, name) {
     if (ev.count > 0) m.recall = ev.count;
   } else if (ev.type === 'done') {
     m.content = ev.reply;
-    m.think = ''; // ollama does not separate thinking in this channel
+    // keep m.think: it stays as a collapsible "Razonamiento" block
+    m.phase = 'answer';
     m.streaming = false;
     m.meta = ev.meta;
     if (ev.usage) {
@@ -1532,13 +1609,35 @@ function handleEvent(ev, sess, aiIdx, name) {
   } else if (ev.type === 'warning') {
     console.warn(ev.text);
   }
-  // partial render with throttling
+  // throttled updates; during streaming, patch ONLY the live nodes (no full re-render → no flicker)
   if (!state._raf) {
     state._raf = requestAnimationFrame(() => {
       state._raf = null;
-      render();
+      streamPatch(sess, aiIdx);
     });
   }
+}
+
+const STREAM_CURSOR = '<span style="display:inline-block;width:8px;height:16px;background:var(--ac);border-radius:2px;margin-left:3px;vertical-align:text-bottom;animation:lcCursor .9s steps(1) infinite"></span>';
+
+// Incrementally update the streaming message's content/think nodes instead of re-rendering
+// the whole app (the source of the flicker). Falls back to one full render only when the DOM
+// structure must change: first content token, the reasoning block appearing, etc.
+function streamPatch(sess, aiIdx) {
+  const m = sess.messages[aiIdx];
+  if (!m || !m.streaming) { render(); return; }
+  const cNode = document.getElementById('stream-content');
+  const tNode = document.getElementById('stream-think');
+  const needFull = (m.content && !cNode) || (m.phase === 'think' && m.think && !tNode);
+  if (needFull) { render(); return; }
+  if (tNode && m.phase === 'think') tNode.textContent = m.think;
+  if (cNode) cNode.innerHTML = mdToHtml(m.content) + STREAM_CURSOR;
+  pinScroll();
+}
+
+function pinScroll() {
+  const sc = document.getElementById('chat-scroll');
+  if (sc && sc.scrollHeight - sc.scrollTop - sc.clientHeight < 140) sc.scrollTop = sc.scrollHeight;
 }
 
 function stopMessage() {
