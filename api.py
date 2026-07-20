@@ -128,6 +128,7 @@ def rename_session(old: str, req: RenameRequest):
 class McpAdd(BaseModel):
     name: str
     target: str  # http(s) URL -> http server; anything else -> stdio command
+    token: str | None = None  # optional: bearer auth for remote (http) servers, else stdio env
 
 
 class McpEdit(BaseModel):
@@ -207,7 +208,15 @@ def add_mcp(req: McpAdd):
     cfg = _mcp_cfg()
     if name in cfg["mcpServers"]:
         raise HTTPException(status_code=409, detail=f"Ya existe un MCP llamado '{name}'")
-    cfg["mcpServers"][name] = _mcp_server_from_target(target)
+    server = _mcp_server_from_target(target)
+    token = (req.token or "").strip()
+    if token:
+        # remote (http): bearer header; local (stdio): env var. Optional/nullable.
+        if server.get("type") == "http" or "url" in server:
+            server["headers"] = {"Authorization": f"Bearer {token}"}
+        else:
+            server.setdefault("env", {})["API_TOKEN"] = token
+    cfg["mcpServers"][name] = server
     _mcp_save(cfg)
     return {"ok": True, "servers": list(cfg["mcpServers"].keys()), "configs": _mcp_view(cfg)}
 

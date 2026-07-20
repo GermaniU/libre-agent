@@ -43,7 +43,7 @@ const state = {
   thinkOpen: {}, // msgIndex -> bool
   callsOpen: null,
   soulDraft: '',
-  mcpNew: { name: '', target: '' },
+  mcpNew: { name: '', target: '', token: '' },
   mcpError: null,
   mcpConfigs: [],      // [{name, type, target, env_keys, raw}]
   mcpEditing: null,    // name of the server being edited
@@ -861,13 +861,37 @@ function renderCfgMcp() {
         ` : ''}
       </div>`;
     }).join('') || '<div style="font-size:13px;color:var(--tx3)">No hay MCPs configurados.</div>'}
-    <div style="border:1px dashed var(--bd2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
+    ${(() => {
+      const nm = (state.mcpNew?.name || '').trim();
+      const tg = (state.mcpNew?.target || '').trim();
+      const nameOk = !nm || /^[a-zA-Z0-9_-]{1,60}$/.test(nm);
+      const isUrl = /^https?:\/\//i.test(tg);
+      const addOk = !!nm && !!tg && /^[a-zA-Z0-9_-]{1,60}$/.test(nm);
+      const req = '<span style="color:var(--ac);font-weight:700" title="obligatorio">*</span>';
+      const opt = '<span style="color:var(--tx3);font-weight:400">· opcional</span>';
+      const lbl = 'font-size:11px;color:var(--tx3);display:flex;flex-direction:column;gap:4px';
+      const inp = (border) => `width:100%;height:34px;border:1px solid ${border};border-radius:8px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:0 10px`;
+      const hint = 'font-size:10.5px;color:var(--tx3);line-height:1.4';
+      return `
+    <div style="border:1px dashed var(--bd2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:9px">
       <div style="font-size:12px;font-weight:600;color:var(--tx2)">Agregar servidor</div>
-      <input data-input="mcpName" value="${esc(state.mcpNew?.name || '')}" placeholder="nombre (ej: agentic-memory-mcp)" title="Nombre del server: letras, números, - y _" style="width:100%;height:34px;border:1px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:0 10px">
-      <input data-input="mcpTarget" value="${esc(state.mcpNew?.target || '')}" placeholder="http://host:puerto/mcp  ó  comando args…" title="URL http(s) para servers remotos, o el comando con argumentos para servers stdio locales" style="width:100%;height:34px;border:1px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:0 10px">
+      <label style="${lbl}">Nombre ${req}
+        <input data-input="mcpName" value="${esc(state.mcpNew?.name || '')}" placeholder="agentic-memory-mcp" style="${inp(nameOk ? 'var(--bd)' : 'var(--err)')}">
+        ${!nameOk ? '<span style="font-size:10.5px;color:var(--err)">Solo letras, números, - y _ (máx 60)</span>' : ''}
+      </label>
+      <label style="${lbl}">URL o comando ${req}
+        <input data-input="mcpTarget" value="${esc(state.mcpNew?.target || '')}" placeholder="http://host:puerto/mcp   ó   npx -y paquete" style="${inp('var(--bd)')}">
+        <span style="${hint}">${tg ? (isUrl ? '→ Server remoto (http)' : '→ Server local (stdio): comando + argumentos') : 'http(s)://… para remotos · comando args… para locales'}</span>
+      </label>
+      <label style="${lbl}">Token ${opt}
+        <input data-input="mcpToken" value="${esc(state.mcpNew?.token || '')}" placeholder="(dejalo vacío si no necesita auth)" style="${inp('var(--bd)')}">
+        <span style="${hint}">Nulleable. Solo para servers remotos con auth — se envía como <code style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--bg3);border-radius:4px;padding:0 4px">Authorization: Bearer</code>.</span>
+      </label>
       ${state.mcpError && !state.mcpEditing ? `<div style="font-size:12px;color:var(--err)">${esc(state.mcpError)}</div>` : ''}
-      <button data-action="addMcp" style="height:32px;border:none;border-radius:8px;background:var(--ac);color:#fff;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer">Agregar</button>
-    </div>
+      <div style="font-size:11px;color:var(--tx2);line-height:1.5;background:var(--acbg);border-radius:7px;padding:8px 10px">💡 Para que el modelo <strong>use</strong> estos MCPs necesita <strong>Thinking activado</strong> y un modelo de <strong>ollama con soporte de tools</strong> (o Qwen 35B vía llama.cpp). Sin eso se conectan igual, pero el modelo no los llama.</div>
+      <button data-action="addMcp" ${addOk ? '' : 'disabled'} style="height:32px;border:none;border-radius:8px;background:${addOk ? 'var(--ac)' : 'var(--bg3)'};color:${addOk ? '#fff' : 'var(--tx3)'};font-family:inherit;font-size:12.5px;font-weight:600;cursor:${addOk ? 'pointer' : 'default'}">Agregar</button>
+    </div>`;
+    })()}
     <div style="border:1px dashed var(--bd2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
       <div style="font-size:12px;font-weight:600;color:var(--tx2)">Importar</div>
       <div style="font-size:11.5px;color:var(--tx3);line-height:1.5">Pega uno o varios servers (formato <code style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--bg3);border-radius:5px;padding:1px 5px">mcpServers</code> de Claude). Se agregan o reemplazan por nombre.</div>
@@ -1059,6 +1083,7 @@ function attachEvents() {
       case 'soul': state.soulDraft = t.value; break;
       case 'mcpName': state.mcpNew.name = t.value; break;
       case 'mcpTarget': state.mcpNew.target = t.value; break;
+      case 'mcpToken': state.mcpNew.token = t.value; break;
       case 'mcpEdit': state.mcpEditVal = t.value; break;
       case 'mcpImport': state.mcpImportText = t.value; break;
       case 'rename': state.renameVal = t.value; break;
@@ -1195,13 +1220,25 @@ function selectModel(name) {
 
 async function addMcp() {
   state.mcpError = null;
+  const name = (state.mcpNew.name || '').trim();
+  const target = (state.mcpNew.target || '').trim();
+  const token = (state.mcpNew.token || '').trim();
+  // client-side validation: name + target son lo obligatorio; token es nulleable
+  if (!/^[a-zA-Z0-9_-]{1,60}$/.test(name)) {
+    state.mcpError = 'Nombre inválido: solo letras, números, - y _ (máx 60)';
+    return render();
+  }
+  if (!target) {
+    state.mcpError = 'Falta la URL (http…) o el comando del server';
+    return render();
+  }
   try {
-    const r = await apiPost('/api/mcps', { name: state.mcpNew.name, target: state.mcpNew.target });
+    const r = await apiPost('/api/mcps', { name, target, token: token || null });
     state.mcpServers = r.servers;
     state.mcpConfigs = r.configs || [];
-    if (!state.selectedMcps.includes(state.mcpNew.name.trim())) state.selectedMcps.push(state.mcpNew.name.trim());
+    if (!state.selectedMcps.includes(name)) state.selectedMcps.push(name);
     localStorage.setItem('la-mcps2', JSON.stringify(state.selectedMcps));
-    state.mcpNew = { name: '', target: '' };
+    state.mcpNew = { name: '', target: '', token: '' };
   } catch (e) {
     state.mcpError = e.message.replace(/^\d+: /, '').replace(/^\{"detail":"(.*)"\}$/, '$1');
   }

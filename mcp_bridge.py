@@ -70,7 +70,7 @@ class MCPBridge:
             try:
                 if s.get("type") == "http" or "url" in s:
                     read, write, _ = await self._stack.enter_async_context(
-                        streamablehttp_client(s["url"]))
+                        streamablehttp_client(s["url"], headers=s.get("headers") or None))
                 else:
                     params = StdioServerParameters(
                         command=s["command"], args=s.get("args", []),
