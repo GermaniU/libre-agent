@@ -186,6 +186,11 @@ def _openai_payload(model, messages, temperature, options, think=None):
 def _run_tool(name, args, bridge):
     """Execute a tool (MCP bridge or local) and return its string result."""
     import tools as tools_mod
+    if isinstance(args, dict) and "__invalid_json__" in args:
+        raw = args["__invalid_json__"]
+        return (f"Error: los arguments de {name} llegaron como JSON inválido o truncado "
+                f"({len(raw)} chars; cola: …{raw[-120:]}). Probablemente la generación se "
+                "cortó por max_tokens. Reintenta con un contenido más corto o en partes.")
     if bridge and name in bridge.tools:
         try:
             return bridge.call(name, args)
@@ -204,7 +209,9 @@ def _openai_collect_calls(streamed, content, specs):
         try:
             args = json.loads(slot["args"]) if slot["args"].strip() else {}
         except ValueError:
-            args = {}
+            # truncated (max_tokens) or malformed JSON: never execute with {} — tag it so
+            # _run_tool can tell the model what happened and it can retry sensibly
+            args = {"__invalid_json__": slot["args"]}
         calls.append({"name": slot["name"], "args": args})
     if not calls and specs:  # some models write the tool call as text instead
         calls = [{"name": tc["function"]["name"], "args": tc["function"]["arguments"]}

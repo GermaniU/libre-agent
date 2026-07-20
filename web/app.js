@@ -28,7 +28,7 @@ const state = {
   },
   temp: parseFloat(localStorage.getItem('la-temp') ?? '0.4'),
   topP: parseFloat(localStorage.getItem('la-topp') ?? '0.9'),
-  maxTok: parseInt(localStorage.getItem('la-maxtok') ?? '2048', 10),
+  maxTok: parseInt(localStorage.getItem('la-maxtok') ?? '8192', 10),
   ctx: localStorage.getItem('la-ctx') ?? '8k',
   sysPrompt: '',
   cfg: { ollamaUrl: '', vaultDir: '', tgToken: '', tgChats: '' },
@@ -984,7 +984,7 @@ function attachEvents() {
       case 'openAdv': state.advOpen = true; render(); break;
       case 'closeAdv': state.advOpen = false; render(); break;
       case 'resetAdv':
-        state.temp = 0.4; state.topP = 0.9; state.maxTok = 2048; state.ctx = '8k';
+        state.temp = 0.4; state.topP = 0.9; state.maxTok = 8192; state.ctx = '8k';
         savePrefs(); render();
         break;
       case 'toggleCap':
