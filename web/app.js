@@ -241,6 +241,27 @@ function render() {
   `;
   focusComposer();
   scrollToBottom();
+  typesetMath();
+}
+
+// Render LaTeX math ($…$, $$…$$, \(…\), \[…\]) in the chat using vendored KaTeX.
+// No-op if KaTeX didn't load. Code blocks (pre/code) are ignored by default.
+function typesetMath() {
+  if (!window.renderMathInElement) return;
+  const scope = document.getElementById('chat-scroll');
+  if (!scope) return;
+  try {
+    window.renderMathInElement(scope, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '\\[', right: '\\]', display: true },
+        { left: '\\(', right: '\\)', display: false },
+        { left: '$', right: '$', display: false },
+      ],
+      throwOnError: false,
+      ignoredClasses: ['code-block'],
+    });
+  } catch (e) { /* formula inválida: se deja el texto crudo */ }
 }
 
 function renderSidebar() {
@@ -290,7 +311,7 @@ function renderSidebar() {
         <svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
         Nuevo chat
       </button>
-      <button data-action="clearChat" aria-label="Limpiar conversación actual" title="Limpiar conversación actual" style="width:36px;height:36px;border:1px solid var(--bd);border-radius:10px;background:transparent;color:var(--tx3);cursor:pointer;display:flex;align-items:center;justify-content:center">
+      <button data-action="deleteSpace" data-id="${esc(state.activeId || '')}" ${state.activeId ? '' : 'disabled'} aria-label="Borrar esta conversación" title="Borrar esta conversación" style="width:36px;height:36px;border:1px solid var(--bd);border-radius:10px;background:transparent;color:var(--tx3);cursor:${state.activeId ? 'pointer' : 'default'};opacity:${state.activeId ? '1' : '.5'};display:flex;align-items:center;justify-content:center">
         <svg class="svg-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6"></path></svg>
       </button>
     </div>

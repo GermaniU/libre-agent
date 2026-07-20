@@ -476,9 +476,22 @@ def chat(req: ChatRequest):
 
 
 # ---------------------------------------------------------------- static files (must go last so they don't shadow /api/*)
+def _static_file(path: str):
+    """FileResponse with cache headers: the app shell (html/js/css) must revalidate so
+    edits show up on a normal reload (no more stale app.js); vendored libs are immutable."""
+    norm = path.replace("\\", "/")
+    if "/vendor/" in norm:
+        headers = {"Cache-Control": "public, max-age=31536000, immutable"}
+    elif norm.endswith((".html", ".js", ".css")):
+        headers = {"Cache-Control": "no-cache"}
+    else:
+        headers = {}
+    return FileResponse(path, headers=headers)
+
+
 @app.get("/", include_in_schema=False)
 def root():
-    return FileResponse(os.path.join(_WEB_DIR, "index.html"))
+    return _static_file(os.path.join(_WEB_DIR, "index.html"))
 
 
 def _safe_file(base: str, path: str):
@@ -496,10 +509,10 @@ def static_files(path: str):
     for base in (_WEB_DIR, _STATIC_DIR):
         p = _safe_file(base, path)
         if p:
-            return FileResponse(p)
+            return _static_file(p)
     # Fallback to index.html for SPA routes
     if os.path.isfile(os.path.join(_WEB_DIR, "index.html")):
-        return FileResponse(os.path.join(_WEB_DIR, "index.html"))
+        return _static_file(os.path.join(_WEB_DIR, "index.html"))
     raise HTTPException(status_code=404, detail="Not found")
 
 
