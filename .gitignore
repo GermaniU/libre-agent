@@ -16,6 +16,9 @@ trace.jsonl
 *.jsonl
 static/*.html
 
+# personal del usuario — NUNCA commitear (usa los .example / _fallback de base)
+prompts/soul.md
+
 # sistema
 .DS_Store
 mcp.json
