@@ -237,12 +237,15 @@ def _openai_stream(base, model, messages, temperature=0.4, options=None, think=N
     msgs = list(messages)
     calls_log = []
     usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}
-    for _ in range(max_rounds):
+    for _round in range(max_rounds):
+        # última ronda: no ofrecer tools → el modelo DEBE sintetizar una respuesta con lo
+        # que ya juntó, en vez de seguir llamando tools y morir en "corté el loop".
+        _specs = specs if _round < max_rounds - 1 else None
         payload = _openai_payload(model, msgs, temperature, options, think)
         payload["stream"] = True
         payload["stream_options"] = {"include_usage": True}
-        if specs:
-            payload["tools"] = specs
+        if _specs:
+            payload["tools"] = _specs
         r = requests.post(f"{base}/chat/completions", json=payload, stream=True, timeout=600)
         r.raise_for_status()
         parts, reasoning, streamed = [], [], {}
@@ -285,7 +288,7 @@ def _openai_stream(base, model, messages, temperature=0.4, options=None, think=N
                 usage["gen"] += u.get("completion_tokens", 0)
         usage["rounds"] += 1
         content = "".join(parts)
-        calls = _openai_collect_calls(streamed, content, specs)
+        calls = _openai_collect_calls(streamed, content, _specs)
         if not calls:
             yield ("done", {"reply": content or "".join(reasoning), "calls": calls_log, "usage": usage})
             return
@@ -311,10 +314,12 @@ def _openai_call(base, model, messages, temperature=0.4, options=None, think=Non
     msgs = list(messages)
     calls_log = []
     usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}
-    for _ in range(max_rounds):
+    for _round in range(max_rounds):
+        # última ronda: sin tools → obliga a sintetizar respuesta (no "corté el loop").
+        _specs = specs if _round < max_rounds - 1 else None
         payload = _openai_payload(model, msgs, temperature, options, think)
-        if specs:
-            payload["tools"] = specs
+        if _specs:
+            payload["tools"] = _specs
         r = requests.post(f"{base}/chat/completions", json=payload, timeout=600)
         r.raise_for_status()
         d = r.json()
@@ -334,7 +339,7 @@ def _openai_call(base, model, messages, temperature=0.4, options=None, think=Non
             except ValueError:
                 args = {}
             calls.append({"name": fn["name"], "args": args})
-        if not calls and specs:
+        if not calls and _specs:
             calls = [{"name": tc["function"]["name"], "args": tc["function"]["arguments"]}
                      for tc in _parse_text_tool_calls(content)]
         if not calls:
