@@ -99,7 +99,7 @@ y cuándo recuperarlo, sin que tú toques nada.
 // mcp.json  (en la raíz del proyecto — mismo formato que Claude)
 {
   "mcpServers": {
-    "agentic-memory-mcp": {
+    "mcp-memory": {
       "type": "http",
       "url": "http://localhost:8765/mcp"   // o la IP de la máquina donde corre mcp-memory
     }
@@ -108,7 +108,8 @@ y cuándo recuperarlo, sin que tú toques nada.
 ```
 
 Levanta mcp-memory (ver su [Quickstart](https://github.com/GermaniU/mcp-memory)), apunta
-la URL en `mcp.json`, y en la UI **Config → MCPs** vas a ver el server: puedes
+la URL en `mcp.json`, define `MEMORY_MCP_SERVER` (en `.env`) con el nombre de ese server
+—contrato de tools en [`docs/memory-mcp.md`](docs/memory-mcp.md)— y en la UI **Config → MCPs** vas a ver el server: puedes
 activarlo/desactivarlo por chat, y **ver/editar su configuración** desde ahí mismo.
 
 ---
@@ -128,7 +129,7 @@ Hay **dos tipos** de servidor:
 {
   "mcpServers": {
     // remoto por HTTP
-    "mcp-memory": { "type": "http", "url": "http://192.168.68.138:8765/mcp" },
+    "mcp-memory": { "type": "http", "url": "http://localhost:8765/mcp" },
 
     // MCP local en Python (stdio): intérprete + ruta al script + variables de entorno
     "vault-rw": {

@@ -24,6 +24,11 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 CORPUS_URL = os.getenv("CORPUS_URL", "http://localhost:5099/api")  # optional: your own corpus/RAG server
 CORPUS_KEY = os.getenv("CORPUS_KEY", "dev-only-key-cambiar-en-prod")
 COMFYUI_URL = os.getenv("COMFYUI_URL", "http://localhost:8188")
+# Name of the MCP server (defined in mcp.json) that provides the memory_* tools. When
+# 💾 Memoria persistente is on, that server's tools are also exposed to the model so it can
+# actively search/save memory, not just receive passive recall. Point it at your own memory
+# MCP (e.g. mcp-memory). Must match a server name in mcp.json. Empty string = disabled.
+MEMORY_MCP_SERVER = os.getenv("MEMORY_MCP_SERVER", "mcp-memory")
 # Optional extra OpenAI-compatible backend (e.g. llama.cpp's llama-server). Its models are
 # listed alongside ollama's and chatted with via /v1/chat/completions. Empty = disabled.
 LLAMACPP_URL = os.getenv("LLAMACPP_URL", "http://localhost:8080/v1")

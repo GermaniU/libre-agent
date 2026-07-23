@@ -139,9 +139,9 @@ ningún MCP. El `mcp_bridge` los conecta al iniciar cada chat, soporta transport
 ```jsonc
 {
   "mcpServers": {
-    "agentic-memory-mcp": {
+    "mcp-memory": {
       "type": "http",
-      "url": "http://192.168.68.138:8765/mcp"
+      "url": "http://localhost:8765/mcp"
     },
     "local": {
       "command": "python",
@@ -174,7 +174,7 @@ embeddings + Qdrant). Tiene dos caminos:
 
 - **Automático** (píldora "Memoria"): `build_system` hace *recall* de hechos relevantes en
   cada turno, y `finalize` hace *save* de lo nuevo. No depende de que el modelo lo pida.
-- **Explícito** (tools MCP): el modelo llama `agentic-memory-mcp__memory_search` /
+- **Explícito** (tools MCP): el modelo llama `mcp-memory__memory_search` /
   `__memory_save` cuando lo decide.
 
 > **Ojo con el modelo** — El camino explícito depende de que el modelo *elija* llamar la

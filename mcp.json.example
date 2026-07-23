@@ -10,6 +10,11 @@
     "ejemplo-http": {
       "type": "http",
       "url": "http://localhost:9000/mcp"
+    },
+    "//memoria": "MCP de memoria persistente. El nombre debe coincidir con MEMORY_MCP_SERVER (.env). Debe exponer memory_search y memory_save (ver docs/memory-mcp.md). stdio o http según tu server.",
+    "mcp-memory": {
+      "type": "http",
+      "url": "http://localhost:8765/mcp"
     }
   }
 }

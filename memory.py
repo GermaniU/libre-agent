@@ -13,6 +13,7 @@ import os
 import re
 import threading
 
+import config
 import mcp_bridge
 import prompts
 
@@ -20,7 +21,7 @@ log = logging.getLogger("localagent.memory")
 
 NAMESPACE = "localagent"
 # Which MCP server backs the memory. Must match a name in mcp.json (override via env).
-_SERVER = os.getenv("MEMORY_MCP_SERVER", "agentic-memory-mcp")
+_SERVER = config.MEMORY_MCP_SERVER
 # mcp_bridge namespaces tools as "<safe_server>__<tool>"; mirror that sanitization here.
 _NS = re.sub(r"[^a-zA-Z0-9_]", "_", _SERVER)
 _SEARCH = f"{_NS}__memory_search"

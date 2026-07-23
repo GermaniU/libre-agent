@@ -232,6 +232,8 @@ def _openai_stream(base, model, messages, temperature=0.4, options=None, think=N
 
     Yields ("token", str), ("tool", (name, args)) and a final ("done", {reply, calls, usage}).
     """
+    if specs:  # tool-calling es poco fiable con reasoning on (modelo abliterated): forzar off
+        think = False
     msgs = list(messages)
     calls_log = []
     usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}
@@ -304,6 +306,8 @@ def _openai_call(base, model, messages, temperature=0.4, options=None, think=Non
 
     Returns (reply, tool_calls_log, usage).
     """
+    if specs:  # tool-calling es poco fiable con reasoning on (modelo abliterated): forzar off
+        think = False
     msgs = list(messages)
     calls_log = []
     usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}

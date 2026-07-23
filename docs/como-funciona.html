@@ -218,9 +218,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <p>LocalAgent usa un <code>mcp.json</code> <strong>propio del proyecto</strong> (no hereda el de Claude). Sin archivo = ningún MCP. El <code>mcp_bridge</code> los conecta al iniciar cada chat, soporta transporte <strong>stdio</strong> y <strong>http</strong>, y namespacea cada tool como <code>&lt;server&gt;__&lt;tool&gt;</code> para que no choquen.</p>
     <div class="cb"><div class="ch">mcp.json — mismo formato que Claude</div><pre>{
   "mcpServers": {
-    "agentic-memory-mcp": {
+    "mcp-memory": {
       "type": "http",
-      "url": "http://192.168.68.138:8765/mcp"
+      "url": "http://localhost:8765/mcp"
     },
     "local": {
       "command": "python",
@@ -244,7 +244,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <p><code>memory.py</code> se apoya en <strong>mcp-memory</strong> (Ollama embeddings + Qdrant). Tiene dos caminos:</p>
     <ul>
       <li><strong>Automático</strong> (píldora "Memoria"): <code>build_system</code> hace <em>recall</em> de hechos relevantes en cada turno, y <code>finalize</code> hace <em>save</em> de lo nuevo. No depende de que el modelo lo pida.</li>
-      <li><strong>Explícito</strong> (tools MCP): el modelo llama <code>agentic-memory-mcp__memory_search</code> / <code>__memory_save</code> cuando lo decide.</li>
+      <li><strong>Explícito</strong> (tools MCP): el modelo llama <code>mcp-memory__memory_search</code> / <code>__memory_save</code> cuando lo decide.</li>
     </ul>
     <div class="box warn"><div class="bt">Ojo con el modelo</div><p>El camino explícito depende de que el modelo <em>elija</em> llamar la tool. Modelos chicos a veces no la disparan con prompts vagos; para recall confiable, deja prendida la píldora "Memoria" (auto-recall) o sé explícito ("busca en tu memoria X").</p></div>
   </div></div>

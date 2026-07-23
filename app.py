@@ -19,6 +19,7 @@ import agent
 import clients
 import config
 import mcp_bridge
+import memory
 import store
 
 st.set_page_config(page_title="LocalAgent", page_icon="🧠", layout="wide")
@@ -188,27 +189,45 @@ with st.sidebar:
         "🧠 Razonamiento (thinking)", value=False,
         help="Activa el pensamiento paso a paso: mejor en preguntas complejas, pero más "
              "lento. Apagado = respuestas ágiles. Se ignora solo si el modelo no razona.")
-    use_memory = st.toggle(
-        "💾 Memoria persistente", value=True,
-        help="Recuerda cosas tuyas entre sesiones (mcp-memory, namespace 'localagent'): "
-             "recall antes de responder + guardado automático de hechos duraderos.")
+    # Memoria persistente: una vez configurado un MCP de memoria (MEMORY_MCP_SERVER + mcp.json)
+    # y conectado, va SIEMPRE activa — recall inyectado en contexto + guardado automático +
+    # sus tools expuestos al modelo. No es un toggle que haya que recordar prender. Sin
+    # configurar, no aplica. Contrato del server: docs/memory-mcp.md.
+    use_memory = bool(config.MEMORY_MCP_SERVER) and memory.available()
+    if use_memory:
+        st.caption(f"💾 Memoria persistente: **activa** vía `{config.MEMORY_MCP_SERVER}` "
+                   "· contexto siempre inyectado")
+    else:
+        st.caption("💾 Memoria persistente: sin configurar "
+                   "· define MEMORY_MCP_SERVER + mcp.json (docs/memory-mcp.md)")
 
     # all the fine-tuning lives here; day-to-day usage doesn't need to touch anything
     bridge = None
     with st.expander("⚙️ Avanzado"):
         temp = st.slider("Temperatura", 0.0, 1.2, 0.4, 0.1)
-        mcp_sel = st.multiselect("🔌 MCPs de Claude", mcp_bridge.list_configured_servers(),
+        mcp_sel = st.multiselect("🔌 MCPs extra (mcp.json)", mcp_bridge.list_configured_servers(),
                                   default=[],
-                                  help="Suma los MCP servers de ~/.claude.json. "
+                                  help="Suma MCP servers de tu mcp.json. "
                                        "Elige pocos: cada uno mete tools al contexto del modelo.")
-        if mcp_sel:
-            with st.spinner("Conectando MCPs…"):
-                bridge = _bridge(tuple(sorted(mcp_sel)))
-            if bridge.connected:
-                st.caption(f"✅ {', '.join(bridge.connected)} · {len(bridge.specs)} tools")
-            for srv, err in bridge.errors.items():
-                st.warning(f"{srv}: {err}")
         st.caption("El soul se edita en `soul.md` (se recarga solo).")
+
+    # Attach servers to the model: the ones picked in Avanzado, plus the configured memory MCP
+    # whenever 💾 Memoria persistente is on — so the model can actively search/save memory as a
+    # tool, not just receive passive recall. Config-driven (MEMORY_MCP_SERVER + mcp.json), no
+    # hardcoded servers → safe for a shared repo. Tool schema: docs/memory-mcp.md.
+    _configured = mcp_bridge.list_configured_servers()
+    _mem_srv = config.MEMORY_MCP_SERVER if (use_memory and config.MEMORY_MCP_SERVER in _configured) else None
+    _servers = set(mcp_sel) | ({_mem_srv} if _mem_srv else set())
+    if _servers:
+        with st.spinner("Conectando MCPs…"):
+            bridge = _bridge(tuple(sorted(_servers)))
+        if bridge.connected:
+            st.caption(f"✅ {', '.join(bridge.connected)} · {len(bridge.specs)} tools")
+        for srv, err in bridge.errors.items():
+            st.warning(f"{srv}: {err}")
+    if use_memory and config.MEMORY_MCP_SERVER and not _mem_srv:
+        st.caption(f"💾 Memoria: el MCP «{config.MEMORY_MCP_SERVER}» no está en mcp.json → "
+                   "solo recall pasivo. Configúralo (MEMORY_MCP_SERVER + mcp.json, ver docs/memory-mcp.md).")
 
     st.caption(("✅ Corpus OK" if clients.corpus_ok() else "⚠️ Corpus sin conexión")
                + " · 🛠️ tools siempre activas")
