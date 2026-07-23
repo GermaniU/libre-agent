@@ -81,6 +81,8 @@ class MCPBridge:
                 for t in (await sess.list_tools()).tools:
                     qname = f"{_safe(name)}__{t.name}"
                     self.tools[qname] = (sess, t.name)
+                    if t.name in config.MCP_TOOLS_HIDDEN:  # ops bulk/mantenimiento: no ofrecer al modelo (revientan el ctx)
+                        continue
                     self.specs.append({"type": "function", "function": {
                         "name": qname,
                         "description": (t.description or "")[:config.MCP_TOOL_DESC_MAX],

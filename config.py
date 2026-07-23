@@ -55,3 +55,8 @@ DEFAULT_TOPK = int(os.getenv("RAG_TOPK", "6"))
 # Max chars per MCP tool description sent to the model. Lower it (e.g. 250) to shrink the
 # prompt when large MCPs (many tools) are active — faster prompt eval, slightly less guidance.
 MCP_TOOL_DESC_MAX = int(os.getenv("MCP_TOOL_DESC_MAX", "900"))
+# Tools MCP que NO se ofrecen al modelo (siguen invocables por código). Ops de mantenimiento
+# o bulk que pueden volcar payloads gigantes y reventar el contexto (p.ej. exportar TODA la
+# memoria de una). Coma-separado, override por env.
+MCP_TOOLS_HIDDEN = {s.strip() for s in os.getenv(
+    "MCP_TOOLS_HIDDEN", "memory_export,memory_import").split(",") if s.strip()}
