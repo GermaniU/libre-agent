@@ -97,14 +97,15 @@ def vault_recent(days=7):
     except Exception as e:
         return f"vault_recent: no pude consultar git ({e}). ¿El vault es un repo git en {root}?"
     # daily notes go by filename (date), which is more reliable than mtime
-    today = datetime.date.today()
     dailies = []
-    for i in range(days):
-        d = today - datetime.timedelta(days=i)
-        p = os.path.join(root, "Daily Notes", f"{d.isoformat()}.md")
-        if os.path.exists(p):
-            with open(p, errors="replace") as f:
-                dailies.append(f"### Daily {d.isoformat()}\n{f.read()[:2500]}")
+    if config.VAULT_DAILY_DIR:
+        today = datetime.date.today()
+        for i in range(days):
+            d = today - datetime.timedelta(days=i)
+            p = os.path.join(root, config.VAULT_DAILY_DIR, f"{d.isoformat()}.md")
+            if os.path.exists(p):
+                with open(p, errors="replace") as f:
+                    dailies.append(f"### Daily {d.isoformat()}\n{f.read()[:2500]}")
     out = f"Notas modificadas en los últimos {days} días ({len(recent)}):\n"
     out += "\n".join(f"- {p}" for p in sorted(recent)[:40]) or "(ninguna — quizás falte vault_pull)"
     if dailies:
@@ -112,16 +113,45 @@ def vault_recent(days=7):
     return out[:12000]
 
 
+def _in_vault(path):
+    """Resolve `path` inside VAULT_DIR and validate that it does not escape (anti traversal).
+
+    Returns (absolute_path, None) if valid, or (None, error_message) if not.
+    """
+    import os
+    root = os.path.realpath(config.VAULT_DIR)
+    full = os.path.realpath(os.path.join(root, path or ""))
+    if full != root and not full.startswith(root + os.sep):
+        return None, "Error: ruta fuera del vault."
+    return full, None
+
+
 def vault_read(path):
     """Read a note from the physical vault by relative path (e.g.: 'Daily Notes/2026-07-10.md')."""
     import os
-    p = os.path.realpath(os.path.join(config.VAULT_DIR, path))
-    if not p.startswith(os.path.realpath(config.VAULT_DIR)):
-        return "Error: ruta fuera del vault."
+    p, err = _in_vault(path)
+    if err:
+        return err
     if not os.path.exists(p):
         return f"No existe: {path}"
     with open(p, errors="replace") as f:
         return f.read()[:12000]
+
+
+def vault_list_dir(path=""):
+    """List the contents of a vault folder (to browse its structure by name, e.g.
+    when a semantic vault_search is unavailable or comes up empty)."""
+    import os
+    full, err = _in_vault(path)
+    if err:
+        return err
+    if not os.path.isdir(full):
+        return f"No es una carpeta del vault: {path or '(raíz)'}"
+    entries = sorted(os.listdir(full))
+    if not entries:
+        return "(carpeta vacía)"
+    return "\n".join(f"{'📁' if os.path.isdir(os.path.join(full, e)) else '📄'} {e}"
+                     for e in entries)
 
 
 def write_html(filename, content, title=""):
@@ -153,7 +183,11 @@ def write_html(filename, content, title=""):
 
 def vault_search(query, limit=6):
     """Search passages in the vault (corpus/Qdrant) and return them cited."""
-    hits = clients.corpus_search(query, limit=int(limit))
+    try:
+        hits = clients.corpus_search(query, limit=int(limit))
+    except requests.exceptions.ConnectionError:
+        return (f"vault_search no disponible (CORPUS_URL {config.CORPUS_URL} no responde). "
+                "Prueba vault_list_dir para explorar carpetas o vault_recent para lo reciente.")
     if not hits:
         return "Sin pasajes relevantes en el vault."
     return clients.build_rag_context(hits)
@@ -293,6 +327,7 @@ _TOOL_SCHEMAS = [
     ("vault_pull", {}, []),
     ("vault_recent", {"days": "integer"}, []),
     ("vault_read", {"path": "string"}, ["path"]),
+    ("vault_list_dir", {"path": "string"}, []),
     ("write_html", {"filename": "string", "content": "string", "title": "string"},
      ["filename", "content"]),
     ("vault_search", {"query": "string", "limit": "integer"}, ["query"]),
@@ -331,6 +366,7 @@ SPECS = _build_specs()
 _IMPLS = {"web_search": web_search, "web_fetch": web_fetch,
           "vault_search": vault_search, "write_html": write_html,
           "vault_pull": vault_pull, "vault_recent": vault_recent, "vault_read": vault_read,
+          "vault_list_dir": vault_list_dir,
           "make_dir": make_dir, "write_file": write_file, "read_file": read_file,
           "list_dir": list_dir, "run_cmd": run_cmd, "use_skill": use_skill}
 

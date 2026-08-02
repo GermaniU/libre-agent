@@ -32,7 +32,10 @@ MEMORY_MCP_SERVER = os.getenv("MEMORY_MCP_SERVER", "mcp-memory")
 # Optional extra OpenAI-compatible backend (e.g. llama.cpp's llama-server). Its models are
 # listed alongside ollama's and chatted with via /v1/chat/completions. Empty = disabled.
 LLAMACPP_URL = os.getenv("LLAMACPP_URL", "http://localhost:8080/v1")
-VAULT_DIR = os.getenv("VAULT_DIR", "/mnt/c/Sites/Data")  # physical Obsidian vault (git repo)
+VAULT_DIR = os.getenv("VAULT_DIR", "/mnt/c/Sites/Data")  # physical vault (git repo; Obsidian or other)
+# Subfolder with one note per day (Obsidian's "Daily Notes" convention by default).
+# Set to "" to disable the daily-notes section in vault_recent for vaults that don't use one.
+VAULT_DAILY_DIR = os.getenv("VAULT_DAILY_DIR", "Daily Notes")
 # Root where the model can create projects/scripts (C:\Sites from Windows).
 # To isolate from your existing repos, point to a subfolder, e.g.: /mnt/c/Sites/localagent-projects
 WORKSPACE_DIR = os.getenv("WORKSPACE_DIR", "/mnt/c/Sites")
