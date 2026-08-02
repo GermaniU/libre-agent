@@ -192,6 +192,8 @@ def _run_tool(name, args, bridge, seen=None):
     and nudge the model to try something else instead of burning the round budget.
     """
     if seen is not None:
+        # default=str: args siempre vienen de JSON (del tool_calls del modelo), así que en la
+        # práctica son solo tipos serializables; default=str es solo defensivo, no una ruta real.
         key = (name, json.dumps(args, sort_keys=True, default=str))
         if key in seen:
             return (f"Ya llamaste a {name} con estos mismos argumentos en este turno y no "

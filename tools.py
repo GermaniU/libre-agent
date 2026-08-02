@@ -185,9 +185,10 @@ def vault_search(query, limit=6):
     """Search passages in the vault (corpus/Qdrant) and return them cited."""
     try:
         hits = clients.corpus_search(query, limit=int(limit))
-    except requests.exceptions.ConnectionError:
-        return (f"vault_search no disponible (CORPUS_URL {config.CORPUS_URL} no responde). "
-                "Prueba vault_list_dir para explorar carpetas o vault_recent para lo reciente.")
+    except requests.exceptions.RequestException:
+        return (f"vault_search no disponible (CORPUS_URL {config.CORPUS_URL} no responde o "
+                "devolvió error). Prueba vault_list_dir para explorar carpetas o vault_recent "
+                "para lo reciente.")
     if not hits:
         return "Sin pasajes relevantes en el vault."
     return clients.build_rag_context(hits)
