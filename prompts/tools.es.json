@@ -29,6 +29,12 @@
       "path": "Ruta relativa dentro del vault"
     }
   },
+  "vault_list_dir": {
+    "description": "Lista subcarpetas y notas del VAULT (no del workspace) por ruta relativa. Úsala para explorar la estructura del vault por nombre cuando no sepas la ruta exacta de una nota, sobre todo si vault_search falla o no tiene resultados.",
+    "params": {
+      "path": "Ruta relativa dentro del vault (default la raíz del vault)"
+    }
+  },
   "write_html": {
     "description": "Guarda una página HTML y devuelve la URL para abrirla en el navegador. Úsala cuando el usuario pida un documento, reporte, tabla o página visual. Pasa el HTML completo del body (CSS inline permitido).",
     "params": {
@@ -38,7 +44,7 @@
     }
   },
   "vault_search": {
-    "description": "Busca en las notas personales del vault del usuario (Obsidian). Úsala para preguntas sobre sus notas, libros o proyectos.",
+    "description": "Busca semánticamente en las notas del vault del usuario (requiere un servidor de corpus/RAG configurado, opcional). Si falla o no da resultados, prueba vault_list_dir o vault_recent en su lugar.",
     "params": {
       "query": "Búsqueda semántica",
       "limit": "Cantidad de pasajes (default 6)"

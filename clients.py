@@ -183,8 +183,23 @@ def _openai_payload(model, messages, temperature, options, think=None):
     return payload
 
 
-def _run_tool(name, args, bridge):
-    """Execute a tool (MCP bridge or local) and return its string result."""
+def _run_tool(name, args, bridge, seen=None):
+    """Execute a tool (MCP bridge or local) and return its string result.
+
+    ``seen``, if given, is a set shared across one round loop: repeating the exact same
+    (name, args) call is a stall, not progress (typically a model stuck retrying a failed
+    lookup until max_rounds cuts the whole turn) — short-circuit it without re-executing
+    and nudge the model to try something else instead of burning the round budget.
+    """
+    if seen is not None:
+        # default=str: args siempre vienen de JSON (del tool_calls del modelo), así que en la
+        # práctica son solo tipos serializables; default=str es solo defensivo, no una ruta real.
+        key = (name, json.dumps(args, sort_keys=True, default=str))
+        if key in seen:
+            return (f"Ya llamaste a {name} con estos mismos argumentos en este turno y no "
+                     "avanzó. No lo repitas: probá otra tool o argumentos distintos, o "
+                     "responde ya con lo que tengas.")
+        seen.add(key)
     import tools as tools_mod
     if isinstance(args, dict) and "__invalid_json__" in args:
         raw = args["__invalid_json__"]
@@ -236,6 +251,7 @@ def _openai_stream(base, model, messages, temperature=0.4, options=None, think=N
         think = False
     msgs = list(messages)
     calls_log = []
+    seen = set()
     usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}
     for _round in range(max_rounds):
         # última ronda: no ofrecer tools → el modelo DEBE sintetizar una respuesta con lo
@@ -296,7 +312,7 @@ def _openai_stream(base, model, messages, temperature=0.4, options=None, think=N
         msgs.append({"role": "assistant", "content": content, "tool_calls": oai})
         for i, c in enumerate(calls):
             yield ("tool", (c["name"], c["args"]))
-            result = _run_tool(c["name"], c["args"], bridge)
+            result = _run_tool(c["name"], c["args"], bridge, seen)
             calls_log.append({"tool": c["name"], "args": c["args"], "result": result})
             msgs.append({"role": "tool", "tool_call_id": oai[i]["id"], "content": str(result)})
     yield ("done", {"reply": "⚠️ Corté el loop: máximo de rondas de tools.",
@@ -313,6 +329,7 @@ def _openai_call(base, model, messages, temperature=0.4, options=None, think=Non
         think = False
     msgs = list(messages)
     calls_log = []
+    seen = set()
     usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}
     for _round in range(max_rounds):
         # última ronda: sin tools → obliga a sintetizar respuesta (no "corté el loop").
@@ -349,7 +366,7 @@ def _openai_call(base, model, messages, temperature=0.4, options=None, think=Non
         for i, c in enumerate(calls):
             if on_tool:
                 on_tool(c["name"], c["args"])
-            result = _run_tool(c["name"], c["args"], bridge)
+            result = _run_tool(c["name"], c["args"], bridge, seen)
             calls_log.append({"tool": c["name"], "args": c["args"], "result": result})
             msgs.append({"role": "tool", "tool_call_id": oai[i]["id"], "content": str(result)})
     return "⚠️ Corté el loop: máximo de rondas de tools.", calls_log, usage
@@ -376,6 +393,7 @@ def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None
                             think=think, specs=specs, bridge=bridge, on_tool=on_tool)
     msgs = list(messages)
     calls_log = []
+    seen = set()
     usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}
     for _ in range(max_rounds):
         payload = {"model": model, "messages": msgs, "stream": False, "keep_alive": "30m",
@@ -425,13 +443,7 @@ def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None
             name, args = fn.get("name", "?"), fn.get("arguments") or {}
             if on_tool:
                 on_tool(name, args)
-            if bridge and name in bridge.tools:
-                try:
-                    result = bridge.call(name, args)
-                except Exception as e:
-                    result = f"Error ejecutando {name}: {e}"
-            else:
-                result = tools.execute(name, args)
+            result = _run_tool(name, args, bridge, seen)
             calls_log.append({"tool": name, "args": args, "result": result})
             msgs.append({"role": "tool", "tool_name": name, "content": result})
     return "⚠️ Corté el loop: se alcanzó el máximo de rondas de tools.", calls_log, usage
@@ -455,6 +467,7 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
         return
     msgs = list(messages)
     calls_log = []
+    seen = set()
     usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}
     for _ in range(max_rounds):
         payload = {"model": model, "messages": msgs, "stream": True, "keep_alive": "30m",
@@ -522,13 +535,7 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
             fn = tc.get("function", {})
             name, args = fn.get("name", "?"), fn.get("arguments") or {}
             yield ("tool", (name, args))
-            if bridge and name in bridge.tools:
-                try:
-                    result = bridge.call(name, args)
-                except Exception as e:
-                    result = f"Error ejecutando {name}: {e}"
-            else:
-                result = tools.execute(name, args)
+            result = _run_tool(name, args, bridge, seen)
             calls_log.append({"tool": name, "args": args, "result": result})
             msgs.append({"role": "tool", "tool_name": name, "content": result})
     yield ("done", {"reply": "⚠️ Corté el loop: máximo de rondas de tools.",
