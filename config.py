@@ -54,6 +54,9 @@ DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "llama3.2")  # the UI auto-picks the 
 # unknown to ollama). The A3B server runs at 32k, so that's a sane default.
 DEFAULT_CTX = int(os.getenv("DEFAULT_CTX", "32768"))
 DEFAULT_TOPK = int(os.getenv("RAG_TOPK", "6"))
+# Max model<->tool rounds per turn. The last round never offers tools, so the model always
+# closes with an answer; raise it for long multi-step tasks (each round = one model call).
+MAX_TOOL_ROUNDS = max(1, int(os.getenv("MAX_TOOL_ROUNDS", "6")))
 
 # Max chars per MCP tool description sent to the model. Lower it (e.g. 250) to shrink the
 # prompt when large MCPs (many tools) are active — faster prompt eval, slightly less guidance.

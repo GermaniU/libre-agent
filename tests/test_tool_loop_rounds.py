@@ -153,3 +153,18 @@ def test_openai_recibe_options_y_max_rounds(monkeypatch):
     assert payloads[0]["top_p"] == 0.9
     assert "tools" in payloads[0]
     assert "tools" not in payloads[1]  # max_rounds=2 honored: round 2 is the last one
+
+
+def test_max_rounds_por_defecto_sale_de_config(ollama_only, executed, monkeypatch):
+    payloads = []
+
+    def fake_post(url, json=None, **kw):
+        payloads.append(json)
+        return _Resp({"message": _ollama_msg(json, len(payloads))})
+
+    monkeypatch.setattr(config, "MAX_TOOL_ROUNDS", 2)
+    monkeypatch.setattr(clients.requests, "post", fake_post)
+    reply, _, usage = clients.chat_with_tools("m", [{"role": "user", "content": "hi"}])
+    assert reply == "respuesta final"
+    assert usage["rounds"] == 2
+    assert "tools" not in payloads[-1]

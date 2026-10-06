@@ -242,13 +242,14 @@ def _openai_assistant_turn(calls):
 
 
 def _openai_stream(base, model, messages, temperature=0.4, options=None, think=None,
-                   specs=None, bridge=None, max_rounds=6):
+                   specs=None, bridge=None, max_rounds=None):
     """Stream a chat from an OpenAI-compatible backend, WITH tool support.
 
     Yields ("token", str), ("tool", (name, args)) and a final ("done", {reply, calls, usage}).
     """
     if specs:  # tool-calling es poco fiable con reasoning on (modelo abliterated): forzar off
         think = False
+    max_rounds = max_rounds or config.MAX_TOOL_ROUNDS
     msgs = list(messages)
     calls_log = []
     seen = set()
@@ -320,13 +321,14 @@ def _openai_stream(base, model, messages, temperature=0.4, options=None, think=N
 
 
 def _openai_call(base, model, messages, temperature=0.4, options=None, think=None,
-                 specs=None, bridge=None, on_tool=None, max_rounds=6):
+                 specs=None, bridge=None, on_tool=None, max_rounds=None):
     """Non-streaming chat from an OpenAI-compatible backend, WITH tool support.
 
     Returns (reply, tool_calls_log, usage).
     """
     if specs:  # tool-calling es poco fiable con reasoning on (modelo abliterated): forzar off
         think = False
+    max_rounds = max_rounds or config.MAX_TOOL_ROUNDS
     msgs = list(messages)
     calls_log = []
     seen = set()
@@ -374,7 +376,7 @@ def _openai_call(base, model, messages, temperature=0.4, options=None, think=Non
     return "⚠️ Corté el loop: máximo de rondas de tools.", calls_log, usage
 
 
-def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None, bridge=None,
+def chat_with_tools(model, messages, temperature=0.4, max_rounds=None, on_tool=None, bridge=None,
                     use_tools=True, think=None, options=None):
     """Agent loop: the model requests tools, we execute them and return the result.
 
@@ -394,6 +396,7 @@ def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None
         return _openai_call(_openai_models[model], model, messages, temperature, options,
                             think=think, specs=specs, bridge=bridge, on_tool=on_tool,
                             max_rounds=max_rounds)
+    max_rounds = max_rounds or config.MAX_TOOL_ROUNDS
     msgs = list(messages)
     calls_log = []
     seen = set()
@@ -455,7 +458,7 @@ def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None
     return "⚠️ Corté el loop: se alcanzó el máximo de rondas de tools.", calls_log, usage
 
 
-def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridge=None,
+def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=None, bridge=None,
                            use_tools=True, think=None, options=None):
     """Same as chat_with_tools but STREAMING: it's an event generator.
 
@@ -472,6 +475,7 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
                                   options, think, specs=specs, bridge=bridge,
                                   max_rounds=max_rounds)
         return
+    max_rounds = max_rounds or config.MAX_TOOL_ROUNDS
     msgs = list(messages)
     calls_log = []
     seen = set()
