@@ -104,7 +104,7 @@ def vault_recent(days=7):
             d = today - datetime.timedelta(days=i)
             p = os.path.join(root, config.VAULT_DAILY_DIR, f"{d.isoformat()}.md")
             if os.path.exists(p):
-                with open(p, errors="replace") as f:
+                with open(p, encoding="utf-8", errors="replace") as f:
                     dailies.append(f"### Daily {d.isoformat()}\n{f.read()[:2500]}")
     out = f"Notas modificadas en los últimos {days} días ({len(recent)}):\n"
     out += "\n".join(f"- {p}" for p in sorted(recent)[:40]) or "(ninguna — quizás falte vault_pull)"
@@ -134,7 +134,7 @@ def vault_read(path):
         return err
     if not os.path.exists(p):
         return f"No existe: {path}"
-    with open(p, errors="replace") as f:
+    with open(p, encoding="utf-8", errors="replace") as f:
         return f.read()[:12000]
 
 
@@ -167,7 +167,7 @@ def write_html(filename, content, title=""):
             "<meta name='viewport' content='width=device-width, initial-scale=1'>"
             f"<title>{title or name}</title></head><body>\n{content}\n</body></html>"
         )
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         f.write(html)
     try:
         ip = socket.gethostbyname(socket.gethostname())
