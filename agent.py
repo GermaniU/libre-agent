@@ -100,7 +100,7 @@ def run_turn(model, history, prompt, soul, *, channel="web", temperature=0.4,
         else:
             reply, calls_log, usage = clients.chat_with_tools(
                 model, messages, temperature=temperature, bridge=bridge,
-                use_tools=use_tools, think=think, on_tool=on_tool)
+                use_tools=use_tools, think=think, on_tool=on_tool, options=options)
         saved_ok = True
     except Exception as e:
         err_msg = str(e)

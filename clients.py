@@ -351,10 +351,12 @@ def _openai_call(base, model, messages, temperature=0.4, options=None, think=Non
             fn = tc.get("function") or {}
             if not fn.get("name"):
                 continue
+            raw = fn.get("arguments") or ""
             try:
-                args = json.loads(fn.get("arguments") or "{}")
+                args = json.loads(raw) if raw.strip() else {}
             except ValueError:
-                args = {}
+                # truncated/malformed JSON: never execute with {} (same as the streaming path)
+                args = {"__invalid_json__": raw}
             calls.append({"name": fn["name"], "args": args})
         if not calls and _specs:
             calls = [{"name": tc["function"]["name"], "args": tc["function"]["arguments"]}
@@ -373,7 +375,7 @@ def _openai_call(base, model, messages, temperature=0.4, options=None, think=Non
 
 
 def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None, bridge=None,
-                    use_tools=True, think=None):
+                    use_tools=True, think=None, options=None):
     """Agent loop: the model requests tools, we execute them and return the result.
 
     Returns (final_response, tool_calls_log, usage). usage = {"total": tokens
@@ -389,17 +391,20 @@ def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None
     import tools
     specs = (tools.SPECS + (bridge.specs if bridge else [])) if use_tools else None
     if _is_openai(model):  # OpenAI-compatible backend (llama.cpp)
-        return _openai_call(_openai_models[model], model, messages, temperature,
-                            think=think, specs=specs, bridge=bridge, on_tool=on_tool)
+        return _openai_call(_openai_models[model], model, messages, temperature, options,
+                            think=think, specs=specs, bridge=bridge, on_tool=on_tool,
+                            max_rounds=max_rounds)
     msgs = list(messages)
     calls_log = []
     seen = set()
     usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}
-    for _ in range(max_rounds):
+    for _round in range(max_rounds):
+        # última ronda: sin tools → obliga a sintetizar respuesta (no "corté el loop").
+        _specs = specs if _round < max_rounds - 1 else None
         payload = {"model": model, "messages": msgs, "stream": False, "keep_alive": "30m",
-                   "options": {"temperature": temperature}}
-        if specs:
-            payload["tools"] = specs
+                   "options": {"temperature": temperature, **(options or {})}}
+        if _specs:
+            payload["tools"] = _specs
         if think is not None:
             payload["think"] = think
         r = requests.post(f"{config.OLLAMA_URL}/api/chat", json=payload, timeout=600)
@@ -410,8 +415,9 @@ def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None
             if not err:
                 break
             changed = False
-            if specs and "support tools" in err:
-                specs, changed = None, True
+            if _specs and "support tools" in err:
+                specs = _specs = None
+                changed = True
                 payload.pop("tools", None)
             if think is not None and "think" in err:
                 think, changed = None, True
@@ -430,7 +436,7 @@ def chat_with_tools(model, messages, temperature=0.4, max_rounds=6, on_tool=None
         content = msg.get("content", "")
         tool_calls = msg.get("tool_calls")
         if not tool_calls:
-            parsed = _parse_text_tool_calls(content) if specs else []
+            parsed = _parse_text_tool_calls(content) if _specs else []
             if not parsed:
                 return content, calls_log, usage
             # model wrote the tool call as text; rescue it and run it
@@ -463,17 +469,21 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
     specs = (tools.SPECS + (bridge.specs if bridge else [])) if use_tools else None
     if _is_openai(model):  # OpenAI-compatible backend (llama.cpp)
         yield from _openai_stream(_openai_models[model], model, messages, temperature,
-                                  options, think, specs=specs, bridge=bridge)
+                                  options, think, specs=specs, bridge=bridge,
+                                  max_rounds=max_rounds)
         return
     msgs = list(messages)
     calls_log = []
     seen = set()
     usage = {"total": 0, "ctx": 0, "rounds": 0, "gen": 0}
-    for _ in range(max_rounds):
+    for _round in range(max_rounds):
+        # última ronda: no ofrecer tools → el modelo DEBE sintetizar una respuesta con lo
+        # que ya juntó, en vez de seguir llamando tools y morir en "corté el loop".
+        _specs = specs if _round < max_rounds - 1 else None
         payload = {"model": model, "messages": msgs, "stream": True, "keep_alive": "30m",
                    "options": {"temperature": temperature, **(options or {})}}
-        if specs:
-            payload["tools"] = specs
+        if _specs:
+            payload["tools"] = _specs
         if think is not None:
             payload["think"] = think
 
@@ -485,8 +495,9 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
                 break
             err = _err_text(r)
             changed = False
-            if specs and "support tools" in err:
-                specs, changed = None, True
+            if _specs and "support tools" in err:
+                specs = _specs = None
+                changed = True
                 payload.pop("tools", None)
             if think is not None and "think" in err:
                 think, changed = None, True
@@ -522,7 +533,7 @@ def chat_stream_with_tools(model, messages, temperature=0.4, max_rounds=6, bridg
         usage["ctx"] = _ctx_estimate(msgs + [{"role": "assistant", "content": content}], step)
 
         if not tool_calls:
-            parsed = _parse_text_tool_calls(content) if specs else []
+            parsed = _parse_text_tool_calls(content) if _specs else []
             if not parsed:
                 yield ("done", {"reply": content, "calls": calls_log, "usage": usage})
                 return
