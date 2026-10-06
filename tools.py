@@ -278,6 +278,41 @@ def read_file(path, max_chars=10000):
     return content[: int(max_chars)] or "(archivo vacío)"
 
 
+def edit_file(path, old, new, replace_all=False):
+    """Replace an exact snippet of a workspace file (instead of rewriting it whole).
+
+    ``old`` must appear exactly once unless ``replace_all`` is set: an ambiguous match
+    is refused rather than guessed, so the model widens the snippet and retries.
+    Confined to WORKSPACE_DIR via _in_workspace, like the other filesystem tools.
+    """
+    import os
+    full, err = _in_workspace(path)
+    if err:
+        return err
+    if not os.path.isfile(full):
+        return f"No existe el archivo: {path}"
+    if not old:
+        return "Error: `old` vacío. Para crear o reescribir un archivo entero usa write_file."
+    # models sometimes send booleans as strings; bool("false") would be True
+    replace_all = str(replace_all).strip().lower() in ("true", "1", "yes", "si", "sí")
+    # strict decode: errors="replace" would silently corrupt non-UTF-8 bytes on write-back
+    try:
+        with open(full, encoding="utf-8") as f:
+            content = f.read()
+    except UnicodeDecodeError:
+        return f"Error: {path} no es texto UTF-8; edit_file no lo modifica."
+    count = content.count(old)
+    if count == 0:
+        return (f"Error: el fragmento `old` no aparece en {path}. Léelo con read_file y "
+                "copia el texto exacto (espacios e indentación incluidos).")
+    if count > 1 and not replace_all:
+        return (f"Error: el fragmento `old` aparece {count} veces en {path}. Incluye más "
+                "contexto para que sea único, o usa replace_all=true.")
+    with open(full, "w", encoding="utf-8") as f:
+        f.write(content.replace(old, new))
+    return f"Archivo editado ({count} reemplazo{'s' if count > 1 else ''}): {full}"
+
+
 # clearly destructive patterns → always blocked (defense, not exhaustive)
 _BLOCKED_CMD = re.compile(
     r"\brm\s+-rf?\s+(/|~|\$HOME|\*)"          # rm -rf of root/home/everything
@@ -335,6 +370,8 @@ _TOOL_SCHEMAS = [
     ("make_dir", {"path": "string"}, ["path"]),
     ("write_file", {"path": "string", "content": "string"}, ["path", "content"]),
     ("read_file", {"path": "string", "max_chars": "integer"}, ["path"]),
+    ("edit_file", {"path": "string", "old": "string", "new": "string", "replace_all": "boolean"},
+     ["path", "old", "new"]),
     ("list_dir", {"path": "string"}, []),
     ("run_cmd", {"command": "string", "timeout": "integer"}, ["command"]),
     ("use_skill", {"name": "string"}, ["name"]),
@@ -369,7 +406,8 @@ _IMPLS = {"web_search": web_search, "web_fetch": web_fetch,
           "vault_pull": vault_pull, "vault_recent": vault_recent, "vault_read": vault_read,
           "vault_list_dir": vault_list_dir,
           "make_dir": make_dir, "write_file": write_file, "read_file": read_file,
-          "list_dir": list_dir, "run_cmd": run_cmd, "use_skill": use_skill}
+          "edit_file": edit_file, "list_dir": list_dir, "run_cmd": run_cmd,
+          "use_skill": use_skill}
 
 
 def execute(name, args):

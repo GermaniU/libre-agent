@@ -70,6 +70,15 @@
       "max_chars": "Máximo de caracteres a devolver (default 10000)"
     }
   },
+  "edit_file": {
+    "description": "Edita un archivo existente del workspace reemplazando un fragmento exacto por otro, sin reescribirlo entero. Úsala para cambios puntuales (arreglar una función, cambiar una línea); para archivos nuevos o reescrituras completas usa write_file. Lee el archivo con read_file antes para copiar el fragmento tal cual.",
+    "params": {
+      "path": "Ruta relativa dentro del workspace",
+      "old": "Fragmento exacto a reemplazar (debe aparecer una sola vez; incluye contexto si se repite)",
+      "new": "Texto que lo reemplaza (vacío para borrar el fragmento)",
+      "replace_all": "true para reemplazar todas las apariciones (default false)"
+    }
+  },
   "list_dir": {
     "description": "Lista el contenido de una carpeta del workspace (C:\\Sites). Úsala para ver qué existe antes de crear o sobrescribir.",
     "params": {
