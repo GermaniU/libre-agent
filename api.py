@@ -422,6 +422,7 @@ def chat(req: ChatRequest):
 
         # the shared turn loop; this gateway only translates events to NDJSON + persists
         reply, calls_log, usage, meta, saved_facts, err_msg = "", [], {}, None, [], None
+        partial, finished = [], False
         try:
             for ev in agent.run_turn(
                 req.model, sess["messages"], req.message, soul,
@@ -433,6 +434,7 @@ def chat(req: ChatRequest):
                 if t == "recall":
                     yield _event("recall", {"count": ev["count"], "facts": ev["facts"]})
                 elif t == "token":
+                    partial.append(ev["token"])
                     yield _event("token", {"token": ev["token"]})
                 elif t == "think":
                     yield _event("think", {"token": ev["token"]})
@@ -443,23 +445,19 @@ def chat(req: ChatRequest):
                 elif t == "done":
                     reply, calls_log, usage = ev["reply"], ev["calls"], ev["usage"]
                     meta, saved_facts, err_msg = ev["meta"], ev["saved_facts"], ev["error"]
+                    finished = True
         finally:
             if bridge:
                 try:
                     bridge.close()
                 except Exception:
                     log.debug("error closing MCP bridge after turn", exc_info=True)
-
-        # persist the exchange (gateway-specific)
-        sess["tokens"] = sess.get("tokens", 0) + usage.get("total", 0)
-        sess["ctx"] = usage.get("ctx", sess.get("ctx", 0))
-        idx = len(sess["messages"])
-        sess["messages"].append({"role": "assistant", "content": reply})
-        if calls_log:
-            sess.setdefault("tools", {})[str(idx)] = calls_log
-        if saved_facts:
-            sess.setdefault("mem", {})[str(idx)] = saved_facts
-        store.save_session(sess_name, sess)
+            # persist even if the client disconnected mid-stream (the generator gets closed
+            # at a yield): otherwise the user's message and the partial reply are lost
+            if not finished:
+                reply = "".join(partial).strip()
+                reply = (reply + "\n\n" if reply else "") + "⚠️ Respuesta interrumpida."
+            _persist_turn(sess_name, sess, reply, calls_log, usage, saved_facts)
 
         yield _event("done", {
             "reply": reply,
@@ -471,6 +469,19 @@ def chat(req: ChatRequest):
         })
 
     return StreamingResponse(event_stream(), media_type="application/x-ndjson")
+
+
+def _persist_turn(name, sess, reply, calls_log, usage, saved_facts):
+    """Append the assistant reply (+ its tool calls / saved memories) and save the session."""
+    sess["tokens"] = sess.get("tokens", 0) + usage.get("total", 0)
+    sess["ctx"] = usage.get("ctx", sess.get("ctx", 0))
+    idx = len(sess["messages"])
+    sess["messages"].append({"role": "assistant", "content": reply})
+    if calls_log:
+        sess.setdefault("tools", {})[str(idx)] = calls_log
+    if saved_facts:
+        sess.setdefault("mem", {})[str(idx)] = saved_facts
+    store.save_session(name, sess)
 
 
 # ---------------------------------------------------------------- static files (must go last so they don't shadow /api/*)
