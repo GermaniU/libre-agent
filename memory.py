@@ -9,7 +9,6 @@ under the SPA (FastAPI), the Streamlit UI and the Telegram bot.
 """
 import json
 import logging
-import os
 import re
 import threading
 
