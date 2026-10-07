@@ -28,21 +28,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("localagent.telegram")
 
-DIR = os.path.dirname(os.path.abspath(__file__))
-
-
-def _load_env():
-    p = os.path.join(DIR, ".env")
-    if os.path.exists(p):
-        with open(p) as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    k, v = line.split("=", 1)
-                    os.environ.setdefault(k.strip(), v.strip())
-
-
-_load_env()
+# .env is already loaded by `import config` (single loader for every gateway).
 TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 ALLOWED = int(os.environ["TELEGRAM_ALLOWED_USER"])
 API = f"https://api.telegram.org/bot{TOKEN}"
