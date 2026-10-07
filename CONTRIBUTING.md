@@ -65,7 +65,10 @@ Antes de abrir un PR, asegurate de que la suite pase:
 
 ```bash
 python -m pytest tests/ -v
+uvx ruff check .
 ```
+
+El CI (`.github/workflows/ci.yml`) corre exactamente esto en cada PR, con Python 3.12 y 3.13.
 
 Si tu cambio agrega una tool nueva, agregá un test en `tests/`. Si toca guardas de
 seguridad (`_in_workspace`, `_BLOCKED_CMD`), verificá que los tests existentes sigan
