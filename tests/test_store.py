@@ -39,3 +39,22 @@ def test_rename_a_nombre_existente_falla(tmp_path, monkeypatch):
     sesiones = store.load_sessions()
     assert sesiones["b"]["messages"][0]["content"] == "B"  # intacta
     assert "a" in sesiones
+
+
+def test_load_session_una_sola(tmp_path, monkeypatch):
+    _tmp_db(tmp_path, monkeypatch)
+    store.save_session("a", {"messages": [{"role": "user", "content": "A"}]})
+    store.save_session("b", {"messages": []})
+    assert store.load_session("a")["messages"][0]["content"] == "A"
+
+
+def test_load_session_inexistente_es_none(tmp_path, monkeypatch):
+    _tmp_db(tmp_path, monkeypatch)
+    assert store.load_session("nada") is None
+
+
+def test_load_session_corrupta_es_none(tmp_path, monkeypatch):
+    _tmp_db(tmp_path, monkeypatch)
+    with store._conn() as c:
+        c.execute("INSERT INTO sessions (name, data, updated) VALUES ('rota', '{no json', 0)")
+    assert store.load_session("rota") is None

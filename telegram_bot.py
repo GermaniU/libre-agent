@@ -51,7 +51,7 @@ def _persist():
 
 
 def _restore():
-    sess = store.load_sessions().get(TG_SESSION)
+    sess = store.load_session(TG_SESSION)
     if sess:
         state["messages"] = sess.get("messages", [])
         state["tokens"] = sess.get("tokens", 0)

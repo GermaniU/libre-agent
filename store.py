@@ -40,6 +40,23 @@ def load_sessions():
     return out
 
 
+def load_session(name):
+    """Returns one session dict by name, or None if missing/corrupt (reads a single row)."""
+    try:
+        with _lock, _conn() as c:
+            row = c.execute("SELECT data FROM sessions WHERE name=?", (name,)).fetchone()
+    except Exception:
+        log.warning("could not load session %r from %s", name, DB, exc_info=True)
+        return None
+    if not row:
+        return None
+    try:
+        return json.loads(row[0])
+    except Exception:
+        log.warning("session %r is corrupt", name, exc_info=True)
+        return None
+
+
 def save_session(name, session):
     """Persists (or updates) a session. Best-effort: won't break the chat if it fails."""
     try:

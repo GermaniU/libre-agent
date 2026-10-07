@@ -342,8 +342,7 @@ def compact(req: CompactRequest):
     ``req.keep`` messages verbatim.
     """
     try:
-        sessions = store.load_sessions()
-        sess = sessions.get(req.session)
+        sess = store.load_session(req.session)
         if not sess:
             raise HTTPException(status_code=404, detail="No existe esa sesión")
         messages = sess.get("messages", [])
@@ -391,9 +390,8 @@ def chat(req: ChatRequest):
 
     def event_stream():
         sess_name = req.session
-        sessions = store.load_sessions()
-        sess = sessions.get(sess_name, {"messages": [], "tools": {}, "mem": {},
-                                         "tokens": 0, "ctx": 0})
+        sess = store.load_session(sess_name) or {"messages": [], "tools": {}, "mem": {},
+                                                  "tokens": 0, "ctx": 0}
         sess.setdefault("messages", [])
         sess.setdefault("tools", {})
         sess.setdefault("mem", {})
