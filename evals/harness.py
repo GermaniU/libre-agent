@@ -100,7 +100,7 @@ def check(expect, obs):
         if sub.lower() in low:
             fails.append(f"la respuesta contiene lo prohibido '{sub}'")
     if expect.get("lang_neutral"):
-        hits = sorted(set(m.group().lower() for m in _VOSEO.finditer(reply)))
+        hits = sorted({m.group().lower() for m in _VOSEO.finditer(reply)})
         if hits:
             fails.append(f"argentinismos: {hits}")
     if "min_chars" in expect and len(reply.strip()) < expect["min_chars"]:
@@ -126,7 +126,7 @@ def render_report(model, results, elapsed):
     passed = sum(1 for r in results if r["ok"])
     total = len(results)
     lines = [
-        f"# Golden evals — LocalAgent",
+        "# Golden evals — LocalAgent",
         "",
         f"**Modelo:** `{model}`  ·  **Resultado:** {passed}/{total} "
         f"({100*passed//total if total else 0}%)  ·  **Tiempo:** {elapsed:.0f}s",
@@ -139,7 +139,7 @@ def render_report(model, results, elapsed):
         why = "" if r["ok"] else "; ".join(r["fails"])
         tl = ", ".join(r["obs"]["tools"]) or "∅"
         lines.append(f"| `{r['id']}` | {mark} | {tl} | {why} |")
-    lines += ["", f"_Generado el eval; tools stubbeadas, memoria desactivada._", ""]
+    lines += ["", "_Generado el eval; tools stubbeadas, memoria desactivada._", ""]
     return "\n".join(lines)
 
 

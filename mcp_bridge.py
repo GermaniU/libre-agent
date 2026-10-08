@@ -110,3 +110,78 @@ class MCPBridge:
                 parts.append(f"[{getattr(c, 'type', 'contenido')} no textual]")
         out = "\n".join(parts).strip() or "(sin salida)"
         return ("Error del tool: " + out) if res.isError else out
+
+
+# ---------------------------------------------------------------- pool (reuse across turns)
+# One live bridge per server, shared by every turn that selects it: connecting a stdio MCP
+# means spawning its process + handshake (seconds), too slow to repeat on every message.
+_pool = {}
+_pool_lock = threading.Lock()
+
+
+class PooledBridge:
+    """Same surface clients.py uses (.tools/.specs/.call) over pooled per-server bridges.
+
+    Never close it per turn: the connections outlive it. A call that raises evicts its
+    server, so a dead process is reconnected on the next turn instead of failing forever.
+    """
+
+    def __init__(self, servers):
+        self.tools, self.specs, self.errors, self.connected = {}, [], {}, []
+        self._owner = {}  # "server__tool" -> (server name, its pooled bridge)
+        for name in servers:
+            b = _get(name)
+            if name in b.errors:
+                self.errors[name] = b.errors[name]
+                continue
+            self.connected.append(name)
+            self.tools.update(b.tools)
+            self.specs += b.specs
+            self._owner.update(dict.fromkeys(b.tools, (name, b)))
+
+    def call(self, qname, args, timeout=300):
+        from mcp.shared.exceptions import McpError
+        name, b = self._owner[qname]
+        try:
+            return b.call(qname, args, timeout=timeout)
+        except McpError:
+            raise  # the server answered (e.g. bad params): connection is fine, keep it
+        except Exception:
+            _evict(name, b)
+            raise
+
+
+def _get(name):
+    """Pooled bridge for one server; failed connections are returned but not kept."""
+    with _pool_lock:
+        b = _pool.get(name)
+        if b is None:
+            b = MCPBridge([name])
+            if name in b.errors:
+                b.close()  # retry on the next turn (the server may come up later)
+            else:
+                _pool[name] = b
+        return b
+
+
+def pooled(servers):
+    """A bridge over `servers` reusing live connections (see PooledBridge)."""
+    return PooledBridge(sorted(set(servers)))
+
+
+def _evict(name, bridge):
+    """Drop `bridge` from the pool if it is still the live one for `name`."""
+    with _pool_lock:
+        if _pool.get(name) is not bridge:
+            return
+        del _pool[name]
+    bridge.close()
+
+
+def reset_pool(name=None):
+    """Drop (and close) one pooled server, or all of them — e.g. after mcp.json changes."""
+    with _pool_lock:
+        names = [name] if name else list(_pool)
+        dropped = [_pool.pop(n) for n in names if n in _pool]
+    for b in dropped:
+        b.close()

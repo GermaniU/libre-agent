@@ -251,6 +251,7 @@ def edit_mcp(name: str, req: McpEdit):
         cfg["mcpServers"][name] = new
 
     _mcp_save(cfg)
+    mcp_bridge.reset_pool(name)  # reconnect with the new config on the next turn
     return {"ok": True, "servers": list(cfg["mcpServers"].keys()), "configs": _mcp_view(cfg)}
 
 
@@ -281,6 +282,8 @@ def import_mcps(req: McpImport):
     for sname, sconf in servers.items():
         cfg["mcpServers"][sname] = sconf
     _mcp_save(cfg)
+    for sname in servers:
+        mcp_bridge.reset_pool(sname)
     return {
         "ok": True,
         "added": list(servers.keys()),
@@ -296,6 +299,7 @@ def delete_mcp(name: str):
         raise HTTPException(status_code=404, detail="No existe ese MCP")
     del cfg["mcpServers"][name]
     _mcp_save(cfg)
+    mcp_bridge.reset_pool(name)
     return {"ok": True, "servers": list(cfg["mcpServers"].keys()), "configs": _mcp_view(cfg)}
 
 
@@ -342,8 +346,7 @@ def compact(req: CompactRequest):
     ``req.keep`` messages verbatim.
     """
     try:
-        sessions = store.load_sessions()
-        sess = sessions.get(req.session)
+        sess = store.load_session(req.session)
         if not sess:
             raise HTTPException(status_code=404, detail="No existe esa sesión")
         messages = sess.get("messages", [])
@@ -391,9 +394,8 @@ def chat(req: ChatRequest):
 
     def event_stream():
         sess_name = req.session
-        sessions = store.load_sessions()
-        sess = sessions.get(sess_name, {"messages": [], "tools": {}, "mem": {},
-                                         "tokens": 0, "ctx": 0})
+        sess = store.load_session(sess_name) or {"messages": [], "tools": {}, "mem": {},
+                                                  "tokens": 0, "ctx": 0}
         sess.setdefault("messages", [])
         sess.setdefault("tools", {})
         sess.setdefault("mem", {})
@@ -406,13 +408,16 @@ def chat(req: ChatRequest):
         # the front can override the soul for this session
         soul = req.system.strip() if req.system and req.system.strip() else agent.load_soul()
 
-        # connect the selected MCPs (this gateway owns the bridge lifecycle)
+        # the selected MCPs, from the process-wide pool (connections outlive the turn)
         bridge = None
         if req.mcp_servers:
             try:
-                bridge = mcp_bridge.MCPBridge(list(req.mcp_servers))
+                bridge = mcp_bridge.pooled(req.mcp_servers)
             except Exception as e:
                 yield _event("warning", {"text": f"MCP: {e}"})
+            else:
+                for srv, err in bridge.errors.items():
+                    yield _event("warning", {"text": f"MCP {srv}: {err}"})
 
         opts = {}
         if req.top_p is not None:
@@ -424,6 +429,7 @@ def chat(req: ChatRequest):
 
         # the shared turn loop; this gateway only translates events to NDJSON + persists
         reply, calls_log, usage, meta, saved_facts, err_msg = "", [], {}, None, [], None
+        partial, finished = [], False
         try:
             for ev in agent.run_turn(
                 req.model, sess["messages"], req.message, soul,
@@ -435,6 +441,7 @@ def chat(req: ChatRequest):
                 if t == "recall":
                     yield _event("recall", {"count": ev["count"], "facts": ev["facts"]})
                 elif t == "token":
+                    partial.append(ev["token"])
                     yield _event("token", {"token": ev["token"]})
                 elif t == "think":
                     yield _event("think", {"token": ev["token"]})
@@ -445,23 +452,14 @@ def chat(req: ChatRequest):
                 elif t == "done":
                     reply, calls_log, usage = ev["reply"], ev["calls"], ev["usage"]
                     meta, saved_facts, err_msg = ev["meta"], ev["saved_facts"], ev["error"]
+                    finished = True
         finally:
-            if bridge:
-                try:
-                    bridge.close()
-                except Exception:
-                    log.debug("error closing MCP bridge after turn", exc_info=True)
-
-        # persist the exchange (gateway-specific)
-        sess["tokens"] = sess.get("tokens", 0) + usage.get("total", 0)
-        sess["ctx"] = usage.get("ctx", sess.get("ctx", 0))
-        idx = len(sess["messages"])
-        sess["messages"].append({"role": "assistant", "content": reply})
-        if calls_log:
-            sess.setdefault("tools", {})[str(idx)] = calls_log
-        if saved_facts:
-            sess.setdefault("mem", {})[str(idx)] = saved_facts
-        store.save_session(sess_name, sess)
+            # persist even if the client disconnected mid-stream (the generator gets closed
+            # at a yield): otherwise the user's message and the partial reply are lost
+            if not finished:
+                reply = "".join(partial).strip()
+                reply = (reply + "\n\n" if reply else "") + "⚠️ Respuesta interrumpida."
+            _persist_turn(sess_name, sess, reply, calls_log, usage, saved_facts)
 
         yield _event("done", {
             "reply": reply,
@@ -473,6 +471,19 @@ def chat(req: ChatRequest):
         })
 
     return StreamingResponse(event_stream(), media_type="application/x-ndjson")
+
+
+def _persist_turn(name, sess, reply, calls_log, usage, saved_facts):
+    """Append the assistant reply (+ its tool calls / saved memories) and save the session."""
+    sess["tokens"] = sess.get("tokens", 0) + usage.get("total", 0)
+    sess["ctx"] = usage.get("ctx", sess.get("ctx", 0))
+    idx = len(sess["messages"])
+    sess["messages"].append({"role": "assistant", "content": reply})
+    if calls_log:
+        sess.setdefault("tools", {})[str(idx)] = calls_log
+    if saved_facts:
+        sess.setdefault("mem", {})[str(idx)] = saved_facts
+    store.save_session(name, sess)
 
 
 # ---------------------------------------------------------------- static files (must go last so they don't shadow /api/*)
